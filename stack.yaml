@@ -1,0 +1,9 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- location: '.'
+- location: https://github.com/ozataman/coinbase/archive/80b5bdba20358966eeb35193192bba78fa318e91.zip
+  extra-dep: true
+extra-deps:
+- uuid-aeson-0.1.0.0
+resolver: lts-8.23
