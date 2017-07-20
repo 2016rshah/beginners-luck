@@ -12,8 +12,9 @@ import Data.Time.Clock
 
 import Lib
 
+-- | Useful constant 
 btcUSDticker :: ProductId
-btcUSDticker = ProductId "BTC-USD"
+btcUSDticker = ProductId "ETH-USD"
 
 -- | Must use this for getting candles or historical data
 liveConf :: Manager -> ExchangeConf
@@ -28,21 +29,18 @@ nominalDay = 86400
 
 main :: IO ()
 main = do
+  {- GDAX API setup stuff -}
   liveConfig <- liveConf <$> newManager tlsManagerSettings
   sandboxConfig <- sandboxConf <$> newManager tlsManagerSettings
-  ticker <- runExchange sandboxConfig (getProductTicker btcUSDticker)
-  -- Usually using sandbox is probably usually better, but for some things you *must* use live config
+
+  {- Request info from GDAX API -}
+  -- For historical data you *must* use the liveConfig or you'll get bogus values
+  -- For actual trades you probably want to use sandboxConfig so you don't lose a ton of money
+  ticker <- runExchange liveConfig (getProductTicker btcUSDticker)
   -- Three parameters are startTime, endTime, and granularity but Nothing leaves default
   candles <- runExchange liveConfig (getHistory btcUSDticker Nothing Nothing Nothing)
+
+  {- Output results -}
   putStrLn (show ticker)
   putStrLn (show (head <$> candles))
-  putStrLn "Success"
-  -- now <- getCurrentTime
-  -- let hourAgo = addUTCTime (-(nominalDay / 24)) now
-  -- let twoHoursAgo = addUTCTime (2 * (-(nominalDay / 24))) now    
-  -- x <- liftIO $ runExchange config (getProductTicker btcUSDticker)
-  -- xs <- liftIO $ runExchange config (getTrades btcUSDticker)
-
-  
-  -- putStrLn (show xs)
-  -- putStrLn "Hello World!"
+  putStrLn "Success"  
