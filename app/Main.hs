@@ -17,6 +17,7 @@ import Control.Monad.IO.Class
 
 -- Clock stuff
 import Data.Time.Clock
+import Data.Time.LocalTime
 
 -- Graphics stuff
 import Graphics.Rendering.Chart.Easy as E
@@ -36,22 +37,28 @@ liveConf mgr = ExchangeConf mgr Nothing Live
 sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
-nominalDay :: NominalDiffTime
-nominalDay = 86400
-
-toChartCandle :: Coinbase.Exchange.MarketData.Candle -> E.Candle Integer Double
+-- | Converts from the candle type given by the API to the candle type needed for the chart
+toChartCandle :: Coinbase.Exchange.MarketData.Candle -> E.Candle LocalTime Double
 toChartCandle (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) = 
   E.Candle time low open ((open + close) / 2) close high
   where
-    time = floor $ utctDayTime utcTime :: Integer
+    -- | Convert a UTCTime to a LocalTime with the default time zone
+    time = utcToLocalTime utc utcTime
+    -- | Extract values from their type wrappers
     low = unLow l
     open = unOpen o
     close = unClose c
     high = unHigh h
 
-candlePlot :: [E.Candle Integer Double] -> EC l2 (PlotCandle Integer Double)
-candlePlot cs = liftEC $ do
-  plot_candle_values .= cs
+-- | Fills in the aesthetic details to make the candle plot look nice
+mkCandlePlot :: [E.Candle a b] -> EC l2 (PlotCandle a b)
+mkCandlePlot cs = liftEC $ do
+                 plot_candle_fill .= True
+                 plot_candle_rise_fill_style .= solidFillStyle (opaque white)
+                 plot_candle_fall_fill_style .= solidFillStyle (opaque blue)
+                 plot_candle_tick_length .= 0
+                 plot_candle_width .= 2
+                 plot_candle_values .= cs
 
 main :: IO ()
 main = do
@@ -60,23 +67,21 @@ main = do
   sandboxConfig <- sandboxConf <$> newManager tlsManagerSettings
 
   {- Request info from GDAX API -}
-  -- For historical data you *must* use the liveConfig or you'll get bogus values
-  -- For actual trades you probably want to use sandboxConfig so you don't lose a ton of money
+    -- For historical data you *must* use the liveConfig or you'll get bogus values
+    -- For actual trades you probably want to use sandboxConfig so you don't lose a ton of money
   ticker <- runExchange liveConfig (getProductTicker ethUSDticker)
-  -- Three parameters are startTime, endTime, and granularity but Nothing leaves default
+    -- Three parameters are startTime, endTime, and granularity but Nothing leaves default
   eitherCandles <- (runExchange liveConfig (getHistory ethUSDticker Nothing Nothing Nothing))
 
+  {- Plot/display the data -}
+  putStrLn (show ticker)
   case eitherCandles of
-    Right candles -> do 
-      {- Output results -}
-      putStrLn (show ticker)
-      putStrLn (show (head candles))
-      putStrLn "Success"
-      let cs = map toChartCandle (take 75 candles)
-      toFile def "mychart.svg" $ do
-        plotLeft (candlePlot (cs))
-        plotRight (candlePlot (cs))
-    Left _ -> putStrLn "yikes"
-
-signal :: [Double] -> [(Double,Double)]
-signal xs = [ (x,((sin (x*3.14159/5)))) | x <- xs]
+    Right candles@(candle:_) -> do 
+      putStrLn (show candle)
+      print (length candles)
+      let plotPoints = map toChartCandle (take 100 candles)
+      let renderedPlot = plot (mkCandlePlot plotPoints)
+      toFile def "mychart.svg" renderedPlot
+    Left failure -> do
+      putStrLn "API query for candles did not succeed. Failed with error:"
+      putStrLn (show failure)
