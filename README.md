@@ -8,9 +8,10 @@
 
 # Getting started
 
-After downloading the Haskell platform run the following:
+After downloading the Haskell platform run the following from the terminal:
 
  - `git clone https://github.com/2016rshah/beginners-luck`
+ - `cd beginners-luck`
  - `stack build`
    - If there are errors read them because you might have to do `stack setup` or `stack install` or something
  - `stack exec beginners-luck-exe`
