@@ -12,7 +12,7 @@ After downloading the Haskell platform run the following:
 
  - `git clone https://github.com/2016rshah/beginners-luck`
  - `stack build`
-  - If there are errors read them because you might have to do `stack setup` or something
+   - If there are errors read them because you might have to do `stack setup` or `stack install` or something
  - `stack exec beginners-luck-exe`
 
 Then take a look at `app/Main.hs`
