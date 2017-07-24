@@ -54,8 +54,9 @@ toChartCandle (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) =
 mkCandlePlot :: [E.Candle a b] -> EC l2 (PlotCandle a b)
 mkCandlePlot cs = liftEC $ do
                  plot_candle_fill .= True
-                 plot_candle_rise_fill_style .= solidFillStyle (opaque white)
-                 plot_candle_fall_fill_style .= solidFillStyle (opaque blue)
+                 plot_candle_rise_fill_style .= solidFillStyle (opaque green)
+                 plot_candle_fall_fill_style .= solidFillStyle (opaque red)
+                 plot_candle_line_style .= LineStyle 1 (opaque black) [] LineCapButt LineJoinMiter
                  plot_candle_tick_length .= 0
                  plot_candle_width .= 2
                  plot_candle_values .= cs
