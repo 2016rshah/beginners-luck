@@ -1,4 +1,0 @@
-1:1-1:1::Types.$trModule :: "GHC.Types.Module"
-14:1-14:13::Types.ethUSDticker :: "Coinbase.Exchange.Types.Core.ProductId"
-14:16-14:25::_ :: "{v : Data.Text.Internal.Text -> Coinbase.Exchange.Types.Core.ProductId | v == Coinbase.Exchange.Types.Core.ProductId}"
-14:26-14:35::lq_anf$##7205759403792808824 :: "Data.Text.Internal.Text"

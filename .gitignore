@@ -55,3 +55,5 @@ cabal.config
 *.hp
 
 .stack-work/
+
+.liquid/
