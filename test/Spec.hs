@@ -35,6 +35,15 @@ prices = [
   Coinbase.Exchange.Types.MarketData.Candle defTime defLow defHigh defOpen (Close 7) defVolume
          ]
 
+firstWindow :: [CoinbaseCandle]
+firstWindow = take 5 prices
+
+secondWindow :: [CoinbaseCandle]
+secondWindow = take 5 . drop 1 $ prices
+
+thirdWindow :: [CoinbaseCandle]
+thirdWindow = take 5 . drop 2 $ prices
+
 main :: IO ()
 main = defaultMain tests
 
@@ -42,10 +51,24 @@ tests :: TestTree
 tests = testGroup "Tests" [smaTests]
 
 smaTests = testGroup "Simple Moving Average tests"
-  [ testCase "First window" $
-      (sma (take 5 prices)) @?= 3
-  , testCase "Second window" $
-      (sma (take 5 (drop 1 prices)) @?= 4)
-  , testCase "Third window" $
-    (sma (take 5 (drop 2 prices)) @?= 5)
-  ]
+           [ testCase "First window" $
+             sma firstWindow @?= 3
+           , testCase "Second window" $
+             sma secondWindow @?= 4
+           , testCase "Third window" $
+             sma thirdWindow @?= 5
+           ]
+
+emaTests = testGroup "Exponential Moving Average tests"
+           [ testCase "First window" $
+             firstEMA @?= 3
+           , testCase "Second window" $
+             secondEMA @?= 4
+           , testCase "Third window" $
+             thirdEMA @?= 5
+           ]
+  where
+    firstEMA = case sma firstWindow of
+      SMA firstSMA -> ema (EMA firstSMA) firstWindow
+    secondEMA = ema firstEMA secondWindow
+    thirdEMA = ema secondEMA thirdWindow

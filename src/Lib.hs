@@ -1,7 +1,8 @@
 module Lib
     ( getMostRecentCandles,
       displayCandles,
-      sma
+      sma,
+      ema
     ) where
 
 -- Coinbase stuff
