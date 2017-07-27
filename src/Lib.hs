@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lib
     ( getMostRecentCandles,
       displayCandles,
@@ -84,22 +83,19 @@ getMostRecentCandles conf numCandles candleIntervalMinutes = do
                           (Just startTime)
                           (Just endTime)
                           (Just granularity))
-    
+
+-- | Exponential moving average over a list of candles and the previous EMA
+-- | Note: computes over the entire passed in array
 ema :: EMA -> [CoinbaseCandle] -> EMA
 ema (EMA prevEMA) candles@(candle:_) = EMA ((getClosePrice candle - prevEMA) * multiplier + prevEMA)
   where
     multiplier :: Rational
     multiplier = (toRational 2) / (toRational (length candles) + 1)
 
--- Not sure what the difference between ratio and rational are and when I should use which ?
-newtype SMA = SMA Rational
-  deriving (Show, Eq, Num)
-newtype EMA = EMA Rational
-  deriving (Show, Eq, Num)
-
 getClosePrice :: CoinbaseCandle -> Rational
 getClosePrice (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) = toRational (unClose c)
 
+-- | Simple moving average over an array of candles
 sma :: [CoinbaseCandle] -> SMA
 sma [] = SMA 0 
 sma candles = SMA (totalSum candles / numCandles candles)
