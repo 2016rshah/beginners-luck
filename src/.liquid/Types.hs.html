@@ -1,0 +1,29 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<title>/Users/rushishah/work/beginners-luck/src/Types.hs</title>
+</head>
+<head>
+<link type='text/css' rel='stylesheet' href='liquid.css' />
+</head>
+
+<body>
+<hr>
+Put mouse over identifiers to see inferred types
+<pre><span class=hs-linenum> 1: </span><a class=annot href="#"><span class=annottext>GHC.Types.Module</span><span class='hs-comment'>{-# LANGUAGE OverloadedStrings #-}</span></a>
+<span class=hs-linenum> 2: </span><span class='hs-keyword'>module</span> <span class='hs-conid'>Types</span> <span class='hs-keyword'>where</span>
+<span class=hs-linenum> 3: </span>
+<span class=hs-linenum> 4: </span><span class='hs-keyword'>import</span> <span class='hs-conid'>Coinbase</span><span class='hs-varop'>.</span><span class='hs-conid'>Exchange</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span>
+<span class=hs-linenum> 5: </span><span class='hs-keyword'>import</span> <span class='hs-conid'>Coinbase</span><span class='hs-varop'>.</span><span class='hs-conid'>Exchange</span><span class='hs-varop'>.</span><span class='hs-conid'>MarketData</span>
+<span class=hs-linenum> 6: </span>
+<span class=hs-linenum> 7: </span><span class='hs-keyword'>newtype</span> <span class='hs-conid'>NumCandles</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>NumCandles</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum> 8: </span><span class='hs-keyword'>newtype</span> <span class='hs-conid'>Minutes</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Minutes</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum> 9: </span>
+<span class=hs-linenum>10: </span><span class='hs-keyword'>type</span> <span class='hs-conid'>CoinbaseCandle</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Candle</span>
+<span class=hs-linenum>11: </span>
+<span class=hs-linenum>12: </span><span class='hs-comment'>-- | Useful constant </span>
+<span class=hs-linenum>13: </span><span class='hs-definition'>ethUSDticker</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>ProductId</span>
+<span class=hs-linenum>14: </span><a class=annot href="#"><span class=annottext>Coinbase.Exchange.Types.Core.ProductId</span><span class='hs-definition'>ethUSDticker</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : Data.Text.Internal.Text -&gt; Coinbase.Exchange.Types.Core.ProductId | v == Coinbase.Exchange.Types.Core.ProductId}</span><span class='hs-conid'>ProductId</span></a> <a class=annot href="#"><span class=annottext>Data.Text.Internal.Text</span><span class='hs-str'>"ETH-USD"</span></a>
+</pre>
+</body>
+</html>

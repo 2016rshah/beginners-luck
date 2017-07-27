@@ -16,7 +16,7 @@ After downloading the Haskell platform run the following from the terminal:
    - If there are errors read them because you might have to do `stack setup` or `stack install` or something
  - `stack exec beginners-luck-exe`
 
-Then take a look at `app/Main.hs`
+Then take a look at `app/Main.hs` and `src/Lib.hs
 
 ```
 .
@@ -27,11 +27,21 @@ Then take a look at `app/Main.hs`
 │   └── Main.hs
 ├── beginners-luck.cabal
 ├── src
-│   └── Lib.hs
+│   ├── Lib.hs
+│   └── Types.hs
 ├── stack.yaml
 └── test
     └── Spec.hs
 ```
+
+# Testing and Liquid Haskell
+
+Some program properties will be checked with [Liquid Haskell](https://ucsd-progsys.github.io/liquidhaskell-blog/). If you're curious, install Liquid Haskell and run
+```
+stack exec liquid -- --prune-unsorted src/Types.hs src/Lib.hs app/Main.hs 
+```
+
+Run the tests with `stack build --test`
 
 # See also
 
