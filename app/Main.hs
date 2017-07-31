@@ -9,11 +9,14 @@ import Network.HTTP.Client.TLS
 -- Coinbase stuff
 import Coinbase.Exchange.Types
 
+-- Streaming stuff
+import Streaming
+import qualified Streaming.Prelude as S
+
 -- Haskell stuff
 import Data.Either
 import Control.Concurrent
 import Control.Monad
-import Control.Monad.Loops
 
 import Lib
 import Types
@@ -26,11 +29,15 @@ liveConf mgr = ExchangeConf mgr Nothing Live
 sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
--- | One round of waiting and requesting the next set of data
-keepGettingWindowsWithDelay :: Int -> World -> IO World
-keepGettingWindowsWithDelay delayDuration prevWindow = do
-  threadDelay delayDuration
-  getNextWindow prevWindow 
+makeDecision :: World -> LookingTo -> Decision
+makeDecision (World conf (EMA short, EMA long)) (LookingTo Buy) =
+  if short > long
+  then Decision Buy
+  else Hold
+makeDecision (World conf (EMA short, EMA long)) (LookingTo Sell) =
+  if short < long
+  then Decision Sell
+  else Hold
 
 main :: IO ()
 main = do
@@ -43,7 +50,16 @@ main = do
   firstWorld <- getFirstWorld liveConfig
   
   {- Infinite loop: every period we get the most recent candle and EMAs -}
-  iterateM_ (keepGettingWindowsWithDelay 15000000) firstWorld
+  -- S.effects
+  --   $ S.delay 10
+  --   $ S.next (\w -> S.yield (makeDecision w (LookingTo Buy)))
+  --   $ S.iterateM getNextWindow (return firstWorld)
+
+  S.print $
+    S.for
+      (S.delay 5 (S.iterateM getNextWindow (return firstWorld)))
+      (\world -> S.yield (makeDecision world (LookingTo Sell)))
+    
   
   putStrLn "done!"
 
