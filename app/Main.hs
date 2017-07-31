@@ -13,6 +13,7 @@ import Coinbase.Exchange.Types
 import Data.Either
 import Control.Concurrent
 import Control.Monad
+import Control.Monad.Loops
 
 import Lib
 import Types
@@ -21,36 +22,28 @@ import Types
 liveConf :: Manager -> ExchangeConf
 liveConf mgr = ExchangeConf mgr Nothing Live
 
--- | Use this for trades etc. so you don't lose money 
+-- | Use this for trades etc. so you don't lose money
 sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
--- | Helper for what to do if the rest of the computations in the program depend on this success
-failEither :: Show a => Either a b -> IO b
-failEither (Left err) = fail (show err)
-failEither (Right b) = return b
-
-period :: Minutes
-period = Minutes 2
+-- | One round of waiting and requesting the next set of data
+keepGettingWindowsWithDelay :: Int -> World -> IO World
+keepGettingWindowsWithDelay delayDuration prevWindow = do
+  threadDelay delayDuration
+  getNextWindow prevWindow 
 
 main :: IO ()
 main = do
   {- GDAX API setup stuff -}
-  -- liveConfig <- liveConf <$> newManager tlsManagerSettings
   mgr <- newManager tlsManagerSettings
   let liveConfig = liveConf mgr
   let sandboxConfig = sandboxConf mgr
 
-  {- Request info from GDAX API -}
-  tenCandles <- failEither =<< getMostRecentCandles liveConfig (NumCandles 10) period
-  thirtyCandles <- failEither =<< getMostRecentCandles liveConfig (NumCandles 30) period
+  {- Request first round of info from GDAX API -}
+  firstWorld <- getFirstWorld liveConfig
   
-  {- Plot/display the data -}
-  print (length tenCandles)
-  displayCandles "TenCandlesticks.svg" tenCandles
+  {- Infinite loop: every period we get the most recent candle and EMAs -}
+  iterateM_ (keepGettingWindowsWithDelay 15000000) firstWorld
+  
+  putStrLn "done!"
 
-  -- threadDelay (15000000 :: Int)
-
-  case length tenCandles of
-    0 -> putStrLn "Did not get any candles"
-    _ -> print (sma tenCandles)

@@ -1,8 +1,9 @@
 module Lib
-    ( getMostRecentCandles,
-      displayCandles,
-      sma,
-      ema
+    ( getMostRecentCandles
+    , sma
+    , ema
+    , getNextWindow
+    , getFirstWorld
     ) where
 
 -- Coinbase stuff
@@ -72,7 +73,7 @@ getCandleRequestParams (NumCandles numCandles) (Minutes candleIntervalMinutes) =
 -- | NumCandles: number of candles to get
 -- | Minutes: duration of each candle
 -- | For example you could say `getMostRecentCandles liveConfig (NumCandles 30) (Minutes 2)`
--- | Which would give the 30 most recent candles each spanning two minutes over a total of an hour long window
+-- | Which would give the 30 newest candles each spanning 2 minutes over a total of an hour long window
 getMostRecentCandles :: ExchangeConf -> NumCandles -> Minutes
                      -> IO (Either Coinbase.Exchange.Types.ExchangeFailure [CoinbaseCandle])
 getMostRecentCandles conf numCandles candleIntervalMinutes = do
@@ -85,6 +86,9 @@ getMostRecentCandles conf numCandles candleIntervalMinutes = do
                           (Just endTime)
                           (Just granularity))
 
+getClosePrice :: CoinbaseCandle -> Rational
+getClosePrice (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) = toRational (unClose c)
+
 -- | Exponential moving average over a list of candles and the previous EMA
 -- | Note: computes over the entire passed in array
 ema :: EMA -> [CoinbaseCandle] -> EMA
@@ -93,9 +97,6 @@ ema (EMA prevEMA) candles@(candle:_) = EMA ((getClosePrice candle - prevEMA) * m
     multiplier :: Rational
     multiplier = (toRational 2) / (toRational (length candles) + 1)
 
-getClosePrice :: CoinbaseCandle -> Rational
-getClosePrice (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) = toRational (unClose c)
-
 -- | Simple moving average over an array of candles
 sma :: [CoinbaseCandle] -> SMA
 sma [] = SMA 0 
@@ -103,4 +104,49 @@ sma candles = SMA (totalSum candles / numCandles candles)
   where
     totalSum = (sum . map getClosePrice)
     numCandles = (fromIntegral . length)
-    
+
+-- | Using the old world data computes the next exponential moving average values
+getNextWindow :: World -> IO World
+getNextWindow oldWorld@(World config (shortEMA, longEMA)) = do
+  {- Request info from GDAX API -}
+  eitherShortCandles <- getMostRecentCandles config shortNumCandles candleLength
+  eitherLongCandles <- getMostRecentCandles config longNumCandles candleLength
+  case (eitherShortCandles, eitherLongCandles) of
+    (Left err, _) -> failedRequest err oldWorld
+    (_, Left err) -> failedRequest err oldWorld
+    (Right shortCandles, Right longCandles) -> do
+      {- Plot/display the data -}
+      putStrLn $ "Got " ++ (show . length $ shortCandles) ++ " candlesticks"
+      putStrLn $ "Got " ++ (show . length $ longCandles) ++ " candlesticks"
+      displayCandles "ShortCandlesticks.svg" shortCandles
+      displayCandles "LongCandleSticks.svg" longCandles
+      {- Calculate next EMAs -}
+      let shortEMA' = ema shortEMA shortCandles
+      let longEMA' = ema longEMA longCandles
+      putStrLn $ "Short EMA: " ++ show shortEMA'
+      putStrLn $ "Long EMA: " ++ show longEMA'
+      putStrLn ""
+      return (World config (shortEMA', longEMA'))
+  where
+    failedRequest :: ExchangeFailure -> World -> IO World
+    failedRequest err oldWorld = do
+      putStrLn (show err)
+      return oldWorld
+
+-- | Helper for what to do if the rest of the computations in the program depend on this success
+failEither :: Show a => Either a b -> IO b
+failEither (Left err) = fail (show err)
+failEither (Right b) = return b
+
+getFirstWorld :: ExchangeConf -> IO World
+getFirstWorld config = do
+  shortCandles <- failEither =<< getMostRecentCandles config shortNumCandles candleLength
+  longCandles <- failEither =<< getMostRecentCandles config longNumCandles candleLength
+  let shortSMA = sma shortCandles
+  let longSMA = sma longCandles
+  putStrLn $ "Short SMA: " ++ show shortSMA
+  putStrLn $ "Long SMA: " ++ show longSMA
+  let world = case (shortSMA, longSMA) of
+        ((SMA short), (SMA long)) -> World config (EMA short, EMA long)
+  return world 
+  

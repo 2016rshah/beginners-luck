@@ -3,7 +3,8 @@
 module Types where
 
 import Coinbase.Exchange.Types.Core
-import Coinbase.Exchange.MarketData
+import Coinbase.Exchange.MarketData (Candle)
+import Coinbase.Exchange.Types (ExchangeConf) 
 
 newtype NumCandles = NumCandles Int
 newtype Minutes = Minutes Int
@@ -16,6 +17,19 @@ newtype EMA = EMA Rational
 
 type CoinbaseCandle = Candle
 
--- | Useful constant 
+type Window = (EMA, EMA)
+
+data World = World ExchangeConf Window
+
+{- Constants -} 
 ethUSDticker :: ProductId
-ethUSDticker = ProductId "ETH-USD"
+ethUSDticker = ProductId ("ETH-USD")
+
+candleLength :: Minutes
+candleLength = Minutes 2
+
+shortNumCandles :: NumCandles
+shortNumCandles = NumCandles 10
+
+longNumCandles :: NumCandles
+longNumCandles = NumCandles 30

@@ -38,6 +38,7 @@ executable beginners-luck-exe
                      , time
                      , Chart >= 1.8.2
                      , Chart-diagrams >= 1.8.2
+                     , monad-loops
   default-language:    Haskell2010
 
 test-suite beginners-luck-test
