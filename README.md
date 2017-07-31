@@ -37,11 +37,20 @@ Then take a look at `app/Main.hs` and `src/Lib.hs
 # Testing and Liquid Haskell
 
 Some program properties will be checked with [Liquid Haskell](https://ucsd-progsys.github.io/liquidhaskell-blog/). If you're curious, install Liquid Haskell and run
+
 ```
-stack exec liquid -- --prune-unsorted src/Types.hs src/Lib.hs app/Main.hs 
+stack exec liquid -- --prune-unsorted src/Types.hs src/Lib.hs app/Main.hs
 ```
 
 Run the tests with `stack build --test`
+
+# Roadmap
+ - Streams: Refactor to use [Streams](https://hackage.haskell.org/package/streaming) instead of explicit recursion and stuff
+ - Trades: Start using the computed data to make trade decisions
+  - > A trader enters buy orders when the short-term EMA crosses above the long-term EMA or enters sell orders when the short-term EMA crosses below the long-term EMA.
+ - Profits: Keep track of how much money we would make or lose if we ran the bot
+ - Plug it in to actually make trades
+ - Persistence: Start writing the data to a database or something rather than the console
 
 # See also
 
