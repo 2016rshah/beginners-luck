@@ -50,11 +50,6 @@ main = do
   firstWorld <- getFirstWorld liveConfig
   
   {- Infinite loop: every period we get the most recent candle and EMAs -}
-  -- S.effects
-  --   $ S.delay 10
-  --   $ S.next (\w -> S.yield (makeDecision w (LookingTo Buy)))
-  --   $ S.iterateM getNextWindow (return firstWorld)
-
   S.print $
     S.for
       (S.delay 5 (S.iterateM getNextWindow (return firstWorld)))
