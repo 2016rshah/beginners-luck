@@ -8,6 +8,8 @@ license: BSD3
 github: githubuser/beginners-luck
 extra-source-files:
 - README.md
+ghc-options:
+  -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
 dependencies:
 - base >=4.7 && <5
 - Chart >=1.8.2

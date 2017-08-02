@@ -29,24 +29,24 @@ sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
 makeDecision :: World -> LookingTo -> Decision
-makeDecision (World conf (Window (EMA short, EMA long) _)) (LookingTo Buy) =
+makeDecision (World _ (Window (EMA short, EMA long) _)) (LookingTo Buy) =
   if short > long
   then Decision Buy
   else Hold
-makeDecision (World conf (Window (EMA short, EMA long) _))  (LookingTo Sell) =
+makeDecision (World _ (Window (EMA short, EMA long) _))  (LookingTo Sell) =
   if short < long -- threshold here to sell sooner and be risk averse
   then Decision Sell
   else Hold
 
 -- | Primarily gonna edit the LookingTo field in the World
 executeDecision :: (Decision, World) -> LookingTo -> IO LookingTo
-executeDecision (Hold, (World config window)) lookingTo= do
+executeDecision (Hold, (World _ window)) lookingTo= do
   putStrLn ("Held with market price at: " ++ show (unPrice window))
   return lookingTo
-executeDecision (Decision Sell, (World config window)) _ = do
+executeDecision (Decision Sell, (World _ window)) _ = do
   putStrLn ("Sold at price: " ++ show (unPrice window))
   return (LookingTo Buy)
-executeDecision (Decision Buy, (World config window)) _ = do
+executeDecision (Decision Buy, (World _ window)) _ = do
   putStrLn ("Bought at price: " ++ show (unPrice window))
   return (LookingTo Sell)
 
