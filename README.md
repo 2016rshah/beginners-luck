@@ -44,15 +44,10 @@ stack exec liquid -- --prune-unsorted src/Types.hs src/Lib.hs app/Main.hs
 
 Run the tests with `stack build --test`
 
-# Strategy
-
-As of right now it is simply exponential moving average crossovers:
-
-> A trader enters buy orders when the short-term EMA crosses above the long-term EMA or enters sell orders when the short-term EMA crosses below the long-term EMA.
-
 # Roadmap
- - ~~Streams: Refactor to use [Streams](https://hackage.haskell.org/package/streaming) instead of explicit recursion and stuff~~
- - ~~Trades: Start using the computed data to determine what trade decision to make~~
+ - Streams: Refactor to use [Streams](https://hackage.haskell.org/package/streaming) instead of explicit recursion and stuff
+ - Trades: Start using the computed data to make trade decisions
+  - > A trader enters buy orders when the short-term EMA crosses above the long-term EMA or enters sell orders when the short-term EMA crosses below the long-term EMA.
  - Profits: Keep track of how much money we would make or lose if we ran the bot
  - Plug it in to actually make trades
  - Persistence: Start writing the data to a database or something rather than the console
@@ -65,4 +60,3 @@ As of right now it is simply exponential moving average crossovers:
  - Market data types (example): https://hackage.haskell.org/package/coinbase-exchange-0.3.0.0/docs/Coinbase-Exchange-Types-MarketData.html#t:Candle
 - Ethereum White Paper: https://github.com/ethereum/wiki/wiki/White-Paper
 - API response example: https://api.gdax.com/products/ETH-USD/candles
-- Streaming library: https://hackage.haskell.org/package/streaming

@@ -11,10 +11,6 @@ import Coinbase.Exchange.Types
   ( ExchangeConf (ExchangeConf)
   , ApiType (Live, Sandbox))
 
--- Streaming stuff
-import Streaming
-import qualified Streaming.Prelude as S
-
 -- Haskell stuff
 
 
@@ -72,8 +68,6 @@ main = do
 
   {- Request first round of info from GDAX API -}
   firstWorld <- getFirstWorld liveConfig
-
-  
 
   -- let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
   -- let decisionWorlds = S.map (\w -> (makeDecision w, w)) worlds
