@@ -1,25 +1,28 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
+{----- IMPORTS -----}
+
 -- Web request stuff
-import Network.HTTP.Client
-import Network.HTTP.Client.TLS
+import Network.HTTP.Client (Manager, newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 -- Coinbase stuff
 import Coinbase.Exchange.Types
+  ( ExchangeConf (ExchangeConf)
+  , ApiType (Live, Sandbox))
 
 -- Streaming stuff
 import Streaming
 import qualified Streaming.Prelude as S
 
 -- Haskell stuff
-import Data.Either
-import Control.Concurrent
-import Control.Monad
 
+
+-- Project stuff
 import Lib
 import Types
+
+{----- FUNCTIONS -----}
 
 -- | Must use this for getting candles or historical data
 liveConf :: Manager -> ExchangeConf
@@ -29,15 +32,27 @@ liveConf mgr = ExchangeConf mgr Nothing Live
 sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
-makeDecision :: World -> LookingTo -> Decision
-makeDecision (World conf (EMA short, EMA long)) (LookingTo Buy) =
+makeDecision :: World -> Decision
+makeDecision (World conf (Window (EMA short, EMA long) _) (LookingTo Buy)) =
   if short > long
   then Decision Buy
   else Hold
-makeDecision (World conf (EMA short, EMA long)) (LookingTo Sell) =
+makeDecision (World conf (Window (EMA short, EMA long) _) (LookingTo Sell)) =
   if short < long -- threshold here to sell sooner and be risk averse
   then Decision Sell
   else Hold
+
+-- | Primarily gonna edit the LookingTo field in the World
+executeDecision :: (Decision, World) -> IO World
+executeDecision (Hold, (World config window lookingTo))= do
+  putStrLn ("Held with market price at: " ++ show (unPrice window))
+  return (World config window lookingTo)
+executeDecision (Decision Sell, (World config window lookingTo))= do
+  putStrLn ("Sold at price: " ++ show (unPrice window))
+  return (World config window (LookingTo Buy))
+executeDecision (Decision Buy, (World config window lookingTo))= do
+  putStrLn ("Bought at price: " ++ show (unPrice window))
+  return (World config window (LookingTo Sell))
 
 -- Variables
   -- percentage for limit order: 1/200
@@ -45,6 +60,8 @@ makeDecision (World conf (EMA short, EMA long)) (LookingTo Sell) =
   -- short length: 10
   -- long length: 30
   -- threshold for putting the sell order
+
+{----- MAIN -----}
 
 main :: IO ()
 main = do
@@ -55,13 +72,29 @@ main = do
 
   {- Request first round of info from GDAX API -}
   firstWorld <- getFirstWorld liveConfig
+
   
+
+  let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
+  let decisionWorlds = S.map (\w -> (makeDecision w, w)) worlds
+  let e = S.map (\dw -> executeDecision dw) decisionWorlds 
+  
+  -- let decisions = S.map (\w -> makeDecision w executedDecisions) worlds 
+
+  -- let decisionWorlds = S.zip decisions worlds
+
+  -- let executedDecisions = S.map (executeDecision) decisionWorlds
+  
+  --S.map (\w -> makeDecision w (LookingTo Buy)) (S.delay 5 (S.iterateM getNextWorld (return firstWorld)))
+  --S.map (\(d, w) lt -> executeDecision 
   {- Infinite loop: every period we get the most recent candle and EMAs -}
-  S.print $
-    S.for
-      (S.delay 5 (S.iterateM getNextWindow (return firstWorld)))
-      (\world -> S.yield (makeDecision world (LookingTo Buy)))
-    
-  
+  --S.effects $
+   -- S.map
+    --(\x -> (executeDecision x))
+  -- S.effects $
+  --     ((S.map
+  --       (\world -> ((makeDecision world (LookingTo Buy), world)))
+  --        (S.delay 5 (S.iterateM getNextWorld (return firstWorld)))))
+
   putStrLn "done!"
 

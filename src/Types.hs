@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Types where
 
-import Coinbase.Exchange.Types.Core
+import Coinbase.Exchange.Types.Core (ProductId (ProductId))
 import Coinbase.Exchange.MarketData (Candle)
 import Coinbase.Exchange.Types (ExchangeConf)
 
@@ -10,9 +10,14 @@ newtype NumCandles = NumCandles Int
 newtype Minutes = Minutes Int
 
 -- Not sure what the difference between ratio and rational are and when I should use which ?
-newtype SMA = SMA Rational
+-- Another option is the "scientific" type from Data.Scientific ?
+type NumberRepresentation = Rational
+
+newtype SMA = SMA NumberRepresentation
   deriving (Show, Eq, Num)
-newtype EMA = EMA Rational
+newtype EMA = EMA NumberRepresentation
+  deriving (Show, Eq, Num)
+newtype Price = Price NumberRepresentation
   deriving (Show, Eq, Num)
 
 type CoinbaseCandle = Candle
@@ -23,13 +28,19 @@ data LookingTo = LookingTo Action
 data Decision = Decision Action | Hold
   deriving Show
 
--- (Short, Long)
-type Window = (EMA, EMA)
+-- (Short, Long) ClosingPrice
+data Window = Window {
+  unEMAs :: (EMA, EMA),
+  unPrice :: Price }
 
-data World = World ExchangeConf Window
+data World = World
+  { unMgr :: ExchangeConf
+  , unWindow :: Window
+  , unLookingTo :: LookingTo }
 
 instance Show World where
-  show (World _ (EMA short, EMA long)) = "Short: " ++ show short ++ "; Long: " ++ show long 
+  show (World _ (Window (EMA short, EMA long) (Price p)) _) =
+    "Short: " ++ show short ++ "; Long: " ++ show long ++ "; Price: " ++ show p
 
 {- Constants -}
 ethUSDticker :: ProductId
