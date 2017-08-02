@@ -116,7 +116,7 @@ sma candles = SMA (totalSum candles / numCandles candles)
 
 -- | Using the old world data computes the next exponential moving average values
 getNextWorld :: World -> IO World
-getNextWorld oldWorld@(World config (Window (shortEMA, longEMA) _) lt) = do
+getNextWorld oldWorld@(World config (Window (shortEMA, longEMA) _)) = do
   {- Request info from GDAX API -}
   eitherShortCandles <- getMostRecentCandles config shortNumCandles candleLength
   eitherLongCandles <- getMostRecentCandles config longNumCandles candleLength
@@ -128,7 +128,7 @@ getNextWorld oldWorld@(World config (Window (shortEMA, longEMA) _) lt) = do
       putStrLn $ ("Short EMA: " ++ show shortEMA' ++ ['\n'] ++ "Long EMA: " ++ show longEMA')
       let recentClosingPrice = getClosePrice recentCandle
       putStrLn (show recentClosingPrice)
-      return (World config (Window (shortEMA', longEMA') (Price recentClosingPrice)) lt)
+      return (World config (Window (shortEMA', longEMA') (Price recentClosingPrice)))
     (Left err, _) -> failedRequest (show err) oldWorld
     (_, Left err) -> failedRequest (show err) oldWorld
     _ -> failedRequest "No candles returned, make sure you are not using sandbox config." oldWorld
@@ -156,6 +156,6 @@ getFirstWorld config = do
         
   let world = case (shortSMA, longSMA) of
         ((SMA short), (SMA long)) ->
-          World config (Window (EMA short, EMA long) (Price priceGuess1)) (LookingTo Buy)
+          World config (Window (EMA short, EMA long) (Price priceGuess1))
   return world
 

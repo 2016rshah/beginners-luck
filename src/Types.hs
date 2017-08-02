@@ -35,11 +35,10 @@ data Window = Window {
 
 data World = World
   { unMgr :: ExchangeConf
-  , unWindow :: Window
-  , unLookingTo :: LookingTo }
+  , unWindow :: Window }
 
 instance Show World where
-  show (World _ (Window (EMA short, EMA long) (Price p)) _) =
+  show (World _ (Window (EMA short, EMA long) (Price p))) =
     "Short: " ++ show short ++ "; Long: " ++ show long ++ "; Price: " ++ show p
 
 {- Constants -}

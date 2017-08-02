@@ -32,27 +32,27 @@ liveConf mgr = ExchangeConf mgr Nothing Live
 sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
-makeDecision :: World -> Decision
-makeDecision (World conf (Window (EMA short, EMA long) _) (LookingTo Buy)) =
+makeDecision :: World -> LookingTo -> Decision
+makeDecision (World conf (Window (EMA short, EMA long) _)) (LookingTo Buy) =
   if short > long
   then Decision Buy
   else Hold
-makeDecision (World conf (Window (EMA short, EMA long) _) (LookingTo Sell)) =
+makeDecision (World conf (Window (EMA short, EMA long) _))  (LookingTo Sell) =
   if short < long -- threshold here to sell sooner and be risk averse
   then Decision Sell
   else Hold
 
 -- | Primarily gonna edit the LookingTo field in the World
-executeDecision :: (Decision, World) -> IO World
-executeDecision (Hold, (World config window lookingTo))= do
+executeDecision :: (Decision, World) -> LookingTo -> IO LookingTo
+executeDecision (Hold, (World config window)) lookingTo= do
   putStrLn ("Held with market price at: " ++ show (unPrice window))
-  return (World config window lookingTo)
-executeDecision (Decision Sell, (World config window lookingTo))= do
+  return lookingTo
+executeDecision (Decision Sell, (World config window)) _ = do
   putStrLn ("Sold at price: " ++ show (unPrice window))
-  return (World config window (LookingTo Buy))
-executeDecision (Decision Buy, (World config window lookingTo))= do
+  return (LookingTo Buy)
+executeDecision (Decision Buy, (World config window)) _ = do
   putStrLn ("Bought at price: " ++ show (unPrice window))
-  return (World config window (LookingTo Sell))
+  return (LookingTo Sell)
 
 -- Variables
   -- percentage for limit order: 1/200
@@ -76,14 +76,14 @@ main = do
   
 
   let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
-  let decisionWorlds = S.map (\w -> (makeDecision w, w)) worlds
-  let e = S.map (\dw -> executeDecision dw) decisionWorlds 
+  -- let decisionWorlds = S.map (\w -> (makeDecision w, w)) worlds
+  -- let e = S.map (\dw -> executeDecision dw) decisionWorlds 
   
-  -- let decisions = S.map (\w -> makeDecision w executedDecisions) worlds 
+  let decisions = S.map (\w -> makeDecision w executedDecisions) worlds 
 
-  -- let decisionWorlds = S.zip decisions worlds
+  let decisionWorlds = S.zip decisions worlds
 
-  -- let executedDecisions = S.map (executeDecision) decisionWorlds
+  let executedDecisions = S.map (executeDecision) decisionWorlds
   
   --S.map (\w -> makeDecision w (LookingTo Buy)) (S.delay 5 (S.iterateM getNextWorld (return firstWorld)))
   --S.map (\(d, w) lt -> executeDecision 
