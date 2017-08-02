@@ -24,7 +24,6 @@ library
                      , time
                      , Chart >= 1.8.2
                      , Chart-diagrams >= 1.8.2
-                     , streaming
   default-language:    Haskell2010
 
 executable beginners-luck-exe
@@ -39,7 +38,7 @@ executable beginners-luck-exe
                      , time
                      , Chart >= 1.8.2
                      , Chart-diagrams >= 1.8.2
-                     , streaming
+                     , monad-loops
   default-language:    Haskell2010
 
 test-suite beginners-luck-test
