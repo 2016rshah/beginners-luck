@@ -36,8 +36,11 @@ tramp
 
 #####=== Haskell ===#####
 
-dist
-cabal-dev
+.cabal-sandbox/
+.liquid/
+.stack-work/
+dist/
+cabal-dev/
 *.o
 *.hi
 *.chi
@@ -47,13 +50,9 @@ cabal-dev
 .virtualenv
 .hpc
 .hsenv
-.cabal-sandbox/
+beginners-luck.cabal
 cabal.sandbox.config
 cabal.config
 *.prof
 *.aux
 *.hp
-
-.stack-work/
-
-.liquid/
