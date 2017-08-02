@@ -35,9 +35,16 @@ makeDecision (World conf (EMA short, EMA long)) (LookingTo Buy) =
   then Decision Buy
   else Hold
 makeDecision (World conf (EMA short, EMA long)) (LookingTo Sell) =
-  if short < long
+  if short < long -- threshold here to sell sooner and be risk averse
   then Decision Sell
   else Hold
+
+-- Variables
+  -- percentage for limit order: 1/200
+  -- time per window: 3 minutes
+  -- short length: 10
+  -- long length: 30
+  -- threshold for putting the sell order
 
 main :: IO ()
 main = do
@@ -53,7 +60,7 @@ main = do
   S.print $
     S.for
       (S.delay 5 (S.iterateM getNextWindow (return firstWorld)))
-      (\world -> S.yield (makeDecision world (LookingTo Sell)))
+      (\world -> S.yield (makeDecision world (LookingTo Buy)))
     
   
   putStrLn "done!"
