@@ -68,29 +68,31 @@ main = do
   {- GDAX API setup stuff -}
   mgr <- newManager tlsManagerSettings
   let liveConfig = liveConf mgr
-  let sandboxConfig = sandboxConf mgr
+  -- let sandboxConfig = sandboxConf mgr
 
   {- Request first round of info from GDAX API -}
   firstWorld <- getFirstWorld liveConfig
 
   
 
-  let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
+  -- let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
   -- let decisionWorlds = S.map (\w -> (makeDecision w, w)) worlds
   -- let e = S.map (\dw -> executeDecision dw) decisionWorlds 
-  
-  let decisions = S.map (\w -> makeDecision w executedDecisions) worlds 
 
-  let decisionWorlds = S.zip decisions worlds
+  -- let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
 
-  let executedDecisions = S.map (executeDecision) decisionWorlds
+  -- let decisions = S.map (\w -> makeDecision w executedDecisions) worlds 
+
+  -- let decisionWorlds = S.zip decisions worlds
+
+  -- let executedDecisions = S.map (executeDecision) decisionWorlds
   
   --S.map (\w -> makeDecision w (LookingTo Buy)) (S.delay 5 (S.iterateM getNextWorld (return firstWorld)))
   --S.map (\(d, w) lt -> executeDecision 
   {- Infinite loop: every period we get the most recent candle and EMAs -}
-  --S.effects $
-   -- S.map
-    --(\x -> (executeDecision x))
+  -- S.effects $
+  --  S.map
+  --   (\x -> (executeDecision x))
   -- S.effects $
   --     ((S.map
   --       (\world -> ((makeDecision world (LookingTo Buy), world)))

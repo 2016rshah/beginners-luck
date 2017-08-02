@@ -4,6 +4,7 @@ module Lib
     , ema
     , getNextWorld
     , getFirstWorld
+    , displayCandles
     ) where
 
 {----- IMPORTS -----}
@@ -14,7 +15,7 @@ import Coinbase.Exchange.MarketData
   , unLow, unOpen, unClose, unHigh
   , getHistory)
 import Coinbase.Exchange.Types
-  ( ExchangeConf (ExchangeConf)
+  ( ExchangeConf
   , ExchangeFailure
   , runExchange) 
 
@@ -23,18 +24,17 @@ import Data.Time.Clock
 import Data.Time.LocalTime
 
 -- Graphics stuff
-import Graphics.Rendering.Chart.Easy as E
+import Graphics.Rendering.Chart.Easy as E hiding (close)
 import Graphics.Rendering.Chart.Backend.Diagrams (toFile)
 
 -- Haskell stuff
-import Control.Exception.Base
 
 -- Beginners luck stuff
 import Types
 
 -- | Converts from the candle type given by the API to the candle type needed for the chart
 toChartCandle :: CoinbaseCandle -> E.Candle LocalTime Double
-toChartCandle (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) =
+toChartCandle (Coinbase.Exchange.MarketData.Candle utcTime l h o c _) =
   E.Candle time low open ((open + close) / 2) close high
   where
     -- | Convert a UTCTime to a LocalTime with the default time zone
@@ -95,7 +95,7 @@ getMostRecentCandles conf numCandles candleIntervalMinutes = do
 
 -- | Helper function that extracts the most recent close price along with adjusting types
 getClosePrice :: CoinbaseCandle -> Rational
-getClosePrice (Coinbase.Exchange.MarketData.Candle utcTime l h o c v) = toRational (unClose c)
+getClosePrice (Coinbase.Exchange.MarketData.Candle _ _ _ _ c _) = toRational (unClose c)
 
 -- | Exponential moving average over a list of candles and the previous EMA
 -- | Note: computes over the entire passed in array
@@ -103,8 +103,8 @@ ema :: EMA -> [CoinbaseCandle] -> EMA
 ema (EMA prevEMA) candles@(candle:_) = EMA ((getClosePrice candle - prevEMA) * multiplier + prevEMA)
   where
     multiplier :: Rational
-    multiplier = (toRational 2) / (toRational (length candles) + 1)
-ema (EMA prevEMA) _ = EMA 0 -- Empty array of candles
+    multiplier = 2 / (toRational (length candles) + 1)
+ema (EMA _) _ = EMA 0 -- Empty array of candles
 
 -- | Simple moving average over an array of candles
 sma :: [CoinbaseCandle] -> SMA
@@ -129,12 +129,12 @@ getNextWorld oldWorld@(World config (Window (shortEMA, longEMA) _)) = do
       let recentClosingPrice = getClosePrice recentCandle
       putStrLn (show recentClosingPrice)
       return (World config (Window (shortEMA', longEMA') (Price recentClosingPrice)))
-    (Left err, _) -> failedRequest (show err) oldWorld
-    (_, Left err) -> failedRequest (show err) oldWorld
-    _ -> failedRequest "No candles returned, make sure you are not using sandbox config." oldWorld
+    (Left err, _) -> failedRequest (show err)
+    (_, Left err) -> failedRequest (show err)
+    _ -> failedRequest "No candles returned, make sure you are not using sandbox config."
   where
-    failedRequest :: String -> World -> IO World
-    failedRequest err oldWorld = do
+    failedRequest :: String -> IO World
+    failedRequest err = do
       putStrLn err
       return oldWorld
 
@@ -151,11 +151,10 @@ getFirstWorld config = do
   let longSMA = sma longCandles
   putStrLn $ "Short SMA: " ++ show shortSMA
   putStrLn $ "Long SMA: " ++ show longSMA
-  let priceGuess1 = getClosePrice (head shortCandles)
-  let priceGuess2 = getClosePrice (head shortCandles)
-        
-  let world = case (shortSMA, longSMA) of
-        ((SMA short), (SMA long)) ->
-          World config (Window (EMA short, EMA long) (Price priceGuess1))
-  return world
-
+  case shortCandles of
+    (candle:_) -> do 
+      let world = case (shortSMA, longSMA) of
+            ((SMA short), (SMA long)) ->
+              World config (Window (EMA short, EMA long) (Price (getClosePrice candle)))
+      return world
+    _ -> error "No candles returned, make sure you are not using sandbox config."
