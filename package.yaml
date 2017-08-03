@@ -8,16 +8,18 @@ license: BSD3
 github: githubuser/beginners-luck
 extra-source-files:
 - README.md
+ghc-options:
+  -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
+default-extensions:
+- FlexibleContexts
 dependencies:
 - base >=4.7 && <5
-- Chart >=1.8.2
-- Chart-diagrams >=1.8.2
 - coinbase-exchange
 - http-client
 - http-client-tls
 - streaming
 - time
-- monad-loops
+- mtl
 library:
   source-dirs: src
 executables:
