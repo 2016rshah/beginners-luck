@@ -2,8 +2,8 @@ module Lib
     ( getMostRecentCandles
     , sma
     , ema
-    , getNextWorld
-    , getFirstWorld
+    , getNextWindow
+    , getFirstWindow
     , displayCandles
     ) where
 
@@ -17,10 +17,10 @@ import Coinbase.Exchange.MarketData
 import Coinbase.Exchange.Types
   ( ExchangeConf
   , ExchangeFailure
-  , runExchange) 
+  , runExchange)
 
 -- Clock stuff
-import Data.Time.Clock 
+import Data.Time.Clock
 import Data.Time.LocalTime
 
 -- Graphics stuff
@@ -114,9 +114,9 @@ sma candles = SMA (totalSum candles / numCandles candles)
     totalSum = (sum . map getClosePrice)
     numCandles = (fromIntegral . length)
 
--- | Using the old world data computes the next exponential moving average values
-getNextWorld :: World -> IO World
-getNextWorld oldWorld@(World config (Window (shortEMA, longEMA) _)) = do
+-- | Using the old window data computes the next exponential moving average values
+getNextWindow :: ExchangeConf -> Window -> IO Window
+getNextWindow config oldWindow@(Window (shortEMA, longEMA) _) = do
   {- Request info from GDAX API -}
   eitherShortCandles <- getMostRecentCandles config shortNumCandles candleLength
   eitherLongCandles <- getMostRecentCandles config longNumCandles candleLength
@@ -128,23 +128,23 @@ getNextWorld oldWorld@(World config (Window (shortEMA, longEMA) _)) = do
       putStrLn $ ("Short EMA: " ++ show shortEMA' ++ ['\n'] ++ "Long EMA: " ++ show longEMA')
       let recentClosingPrice = getClosePrice recentCandle
       putStrLn (show recentClosingPrice)
-      return (World config (Window (shortEMA', longEMA') (Price recentClosingPrice)))
+      return (Window (shortEMA', longEMA') (Price recentClosingPrice))
     (Left err, _) -> failedRequest (show err)
     (_, Left err) -> failedRequest (show err)
     _ -> failedRequest "No candles returned, make sure you are not using sandbox config."
   where
-    failedRequest :: String -> IO World
+    failedRequest :: String -> IO Window
     failedRequest err = do
       putStrLn err
-      return oldWorld
+      return oldWindow
 
 -- | Helper for what to do if the rest of the computations in the program depend on this success
 failEither :: Show a => Either a b -> IO b
 failEither (Left err) = fail (show err)
 failEither (Right b) = return b
 
-getFirstWorld :: ExchangeConf -> IO World
-getFirstWorld config = do
+getFirstWindow :: ExchangeConf -> IO Window
+getFirstWindow config = do
   shortCandles <- failEither =<< getMostRecentCandles config shortNumCandles candleLength
   longCandles <- failEither =<< getMostRecentCandles config longNumCandles candleLength
   let shortSMA = sma shortCandles
@@ -152,9 +152,9 @@ getFirstWorld config = do
   putStrLn $ "Short SMA: " ++ show shortSMA
   putStrLn $ "Long SMA: " ++ show longSMA
   case shortCandles of
-    (candle:_) -> do 
-      let world = case (shortSMA, longSMA) of
+    (candle:_) -> do
+      let window = case (shortSMA, longSMA) of
             ((SMA short), (SMA long)) ->
-              World config (Window (EMA short, EMA long) (Price (getClosePrice candle)))
-      return world
+              (Window (EMA short, EMA long) (Price (getClosePrice candle)))
+      return window
     _ -> error "No candles returned, make sure you are not using sandbox config."

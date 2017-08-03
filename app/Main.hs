@@ -34,27 +34,27 @@ sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
 {----- ALGORITHM AND LOOP -----}
 
--- | Trading algorithm 
-makeDecision :: World -> LookingTo -> Decision
-makeDecision (World _ (Window (EMA short, EMA long) _)) (LookingTo Buy) =
+-- | Trading algorithm
+makeDecision :: Window -> LookingTo -> Decision
+makeDecision (Window (EMA short, EMA long) _) (LookingTo Buy) =
   if short > long
   then Decision Buy
   else Hold
-makeDecision (World _ (Window (EMA short, EMA long) _))  (LookingTo Sell) =
+makeDecision (Window (EMA short, EMA long) _) (LookingTo Sell) =
   if short < long -- threshold here to sell sooner and be risk averse
   then Decision Sell
   else Hold
 
 -- | Fill in with actual API calls,
 -- | but for now just print to see what bot does
-executeDecision :: (Decision, World) -> LookingTo -> IO LookingTo
-executeDecision (Hold, (World _ window)) lookingTo= do
+executeDecision :: ExchangeConf -> (Decision, Window) -> LookingTo -> IO LookingTo
+executeDecision _ (Hold, window) lookingTo = do
   putStrLn ("Held with market price at: " ++ show (unPrice window))
   return lookingTo
-executeDecision (Decision Sell, (World _ window)) _ = do
+executeDecision _ (Decision Sell, window) _ = do
   putStrLn ("Sold at price: " ++ show (unPrice window))
   return (LookingTo Buy)
-executeDecision (Decision Buy, (World _ window)) _ = do
+executeDecision _ (Decision Buy, window) _ = do
   putStrLn ("Bought at price: " ++ show (unPrice window))
   return (LookingTo Sell)
 
@@ -65,19 +65,21 @@ executeDecision (Decision Buy, (World _ window)) _ = do
   -- long length: 30
   -- threshold for putting the sell order
 
--- | Tie everything together 
-makeAndExecuteDecisions :: Stream (Of World) IO () -> Stream (Of LookingTo) (StateT LookingTo IO) ()
-makeAndExecuteDecisions worlds = do
-  worldEither <- liftIO $ S.next worlds
-  case worldEither of
-    Left _ -> error "yikes my world ended"
-    Right (world, remainingWorlds) -> do
+-- | Tie everything together
+makeAndExecuteDecisions ::
+  ExchangeConf
+  -> Stream (Of Window) IO ()
+  -> Stream (Of LookingTo) (StateT LookingTo IO) ()
+makeAndExecuteDecisions config windows = do
+  windowsEither <- liftIO $ S.next windows
+  case windowsEither of
+    Left _ -> error "yikes my window ended"
+    Right (window, remainingWindows) -> do
       lastLookingTo <- get
-      let decision = makeDecision world lastLookingTo
-      nextLookingTo <- liftIO $ executeDecision (decision, world) lastLookingTo
+      let decision = makeDecision window lastLookingTo
+      nextLookingTo <- liftIO $ executeDecision config (decision, window) lastLookingTo
       put nextLookingTo
-      makeAndExecuteDecisions remainingWorlds 
-
+      makeAndExecuteDecisions config remainingWindows
 
 {----- MAIN -----}
 
@@ -89,13 +91,12 @@ main = do
   -- let sandboxConfig = sandboxConf mgr
 
   {- Request first round of info from GDAX API -}
-  firstWorld <- getFirstWorld liveConfig
+  firstWindow <- getFirstWindow liveConfig
 
-  {- Construct the stream of worlds based on some delay -}
-  let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
+  {- Construct the stream of windows based on some delay -}
+  let windows = S.delay 30 (S.iterateM (getNextWindow liveConfig) (return firstWindow))
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT (S.effects (makeAndExecuteDecisions worlds)) (LookingTo Buy)
+  _ <- runStateT (S.effects (makeAndExecuteDecisions liveConfig windows)) (LookingTo Buy)
 
   putStrLn "done!"
-
