@@ -10,6 +10,8 @@ extra-source-files:
 - README.md
 ghc-options:
   -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
+default-extensions:
+- FlexibleContexts
 dependencies:
 - base >=4.7 && <5
 - Chart >=1.8.2
@@ -19,7 +21,7 @@ dependencies:
 - http-client-tls
 - streaming
 - time
-- monad-loops
+- mtl
 library:
   source-dirs: src
 executables:

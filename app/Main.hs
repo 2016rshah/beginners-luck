@@ -12,13 +12,17 @@ import Coinbase.Exchange.Types
   , ApiType (Live, Sandbox))
 
 -- Haskell stuff
+import Control.Monad.State
 
+-- Streaming stuff
+import Streaming
+import qualified Streaming.Prelude as S
 
 -- Project stuff
 import Lib
 import Types
 
-{----- FUNCTIONS -----}
+{----- CONFIGURATIONS -----}
 
 -- | Must use this for getting candles or historical data
 liveConf :: Manager -> ExchangeConf
@@ -28,6 +32,9 @@ liveConf mgr = ExchangeConf mgr Nothing Live
 sandboxConf :: Manager -> ExchangeConf
 sandboxConf mgr = ExchangeConf mgr Nothing Sandbox
 
+{----- ALGORITHM AND LOOP -----}
+
+-- | Trading algorithm 
 makeDecision :: World -> LookingTo -> Decision
 makeDecision (World _ (Window (EMA short, EMA long) _)) (LookingTo Buy) =
   if short > long
@@ -38,7 +45,8 @@ makeDecision (World _ (Window (EMA short, EMA long) _))  (LookingTo Sell) =
   then Decision Sell
   else Hold
 
--- | Primarily gonna edit the LookingTo field in the World
+-- | Fill in with actual API calls,
+-- | but for now just print to see what bot does
 executeDecision :: (Decision, World) -> LookingTo -> IO LookingTo
 executeDecision (Hold, (World _ window)) lookingTo= do
   putStrLn ("Held with market price at: " ++ show (unPrice window))
@@ -50,12 +58,26 @@ executeDecision (Decision Buy, (World _ window)) _ = do
   putStrLn ("Bought at price: " ++ show (unPrice window))
   return (LookingTo Sell)
 
--- Variables
+  -- Variables
   -- percentage for limit order: 1/200
   -- time per window: 3 minutes
   -- short length: 10
   -- long length: 30
   -- threshold for putting the sell order
+
+-- | Tie everything together 
+makeAndExecuteDecisions :: Stream (Of World) IO () -> Stream (Of LookingTo) (StateT LookingTo IO) ()
+makeAndExecuteDecisions worlds = do
+  worldEither <- liftIO $ S.next worlds
+  case worldEither of
+    Left _ -> error "yikes my world ended"
+    Right (world, remainingWorlds) -> do
+      lastLookingTo <- get
+      let decision = makeDecision world lastLookingTo
+      nextLookingTo <- liftIO $ executeDecision (decision, world) lastLookingTo
+      put nextLookingTo
+      makeAndExecuteDecisions remainingWorlds 
+
 
 {----- MAIN -----}
 
@@ -69,28 +91,11 @@ main = do
   {- Request first round of info from GDAX API -}
   firstWorld <- getFirstWorld liveConfig
 
-  -- let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
-  -- let decisionWorlds = S.map (\w -> (makeDecision w, w)) worlds
-  -- let e = S.map (\dw -> executeDecision dw) decisionWorlds 
+  {- Construct the stream of worlds based on some delay -}
+  let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
 
-  -- let worlds = S.delay 5 (S.iterateM getNextWorld (return firstWorld))
-
-  -- let decisions = S.map (\w -> makeDecision w executedDecisions) worlds 
-
-  -- let decisionWorlds = S.zip decisions worlds
-
-  -- let executedDecisions = S.map (executeDecision) decisionWorlds
-  
-  --S.map (\w -> makeDecision w (LookingTo Buy)) (S.delay 5 (S.iterateM getNextWorld (return firstWorld)))
-  --S.map (\(d, w) lt -> executeDecision 
-  {- Infinite loop: every period we get the most recent candle and EMAs -}
-  -- S.effects $
-  --  S.map
-  --   (\x -> (executeDecision x))
-  -- S.effects $
-  --     ((S.map
-  --       (\world -> ((makeDecision world (LookingTo Buy), world)))
-  --        (S.delay 5 (S.iterateM getNextWorld (return firstWorld)))))
+  {- Run an infinite loop to make and execute decisions based on market data -}
+  _ <- runStateT (S.effects (makeAndExecuteDecisions worlds)) (LookingTo Buy)
 
   putStrLn "done!"
 
