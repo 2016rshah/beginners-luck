@@ -45,12 +45,16 @@ stack exec liquid -- --prune-unsorted src/Types.hs src/Lib.hs app/Main.hs
 Run the tests with `stack build --test`
 
 # Roadmap
- - Streams: Refactor to use [Streams](https://hackage.haskell.org/package/streaming) instead of explicit recursion and stuff
- - Trades: Start using the computed data to make trade decisions
-  - > A trader enters buy orders when the short-term EMA crosses above the long-term EMA or enters sell orders when the short-term EMA crosses below the long-term EMA.
+ - ~~Streams: Refactor to use [Streams](https://hackage.haskell.org/package/streaming) instead of explicit recursion and stuff~~
+ - ~~Trades: Start using the computed data to make trade decisions~~
+  - > ~~A trader enters buy orders when the short-term EMA crosses above the long-term EMA or enters sell orders when the short-term EMA crosses below the long-term EMA.~~
  - Profits: Keep track of how much money we would make or lose if we ran the bot
- - Plug it in to actually make trades
+  - Right now it prints rationals to the console, make it print human readable numbers instead and perhaps in a better format (the kind of thing you can plug into excel)
  - Persistence: Start writing the data to a database or something rather than the console
+ - Compute/print the stop-limit order prices that you will place trades with
+ - Sell early by implementing the threshold limit in the decision making process
+ - Obtain API keys, etc.
+ - Start making actual API calls to the sandbox to see progress
 
 # See also
 
