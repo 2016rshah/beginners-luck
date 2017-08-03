@@ -96,9 +96,11 @@ main = do
   firstWindow <- getFirstWindow liveConfig
 
   {- Construct the stream of windows based on some delay -}
-  let windows = S.delay 30 (S.iterateM (getNextWindow liveConfig) (return firstWindow))
+  let windows = S.delay
+                (fromIntegral (unSeconds pollLength))
+                (S.iterateM (getNextWindow liveConfig) (return firstWindow))
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT ((makeAndExecuteDecisions liveConfig windows)) (LookingTo Buy)
+  _ <- runStateT (makeAndExecuteDecisions liveConfig windows) (LookingTo Buy)
 
   putStrLn "done!"

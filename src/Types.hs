@@ -44,3 +44,8 @@ shortNumCandles = NumCandles 10
 
 longNumCandles :: NumCandles
 longNumCandles = NumCandles 30
+
+pollLength :: Seconds
+pollLength = Seconds 30
+
+newtype Seconds = Seconds { unSeconds :: Int }
