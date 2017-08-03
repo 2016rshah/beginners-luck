@@ -18,6 +18,8 @@ import Control.Monad.State
 import Streaming
 import qualified Streaming.Prelude as S
 
+import Data.Void
+
 -- Project stuff
 import Lib
 import Types
@@ -68,12 +70,12 @@ executeDecision _ (Decision Buy, window) _ = do
 -- | Tie everything together
 makeAndExecuteDecisions ::
   ExchangeConf
-  -> Stream (Of Window) IO ()
-  -> Stream (Of LookingTo) (StateT LookingTo IO) ()
+  -> Stream (Of Window) IO Void
+  -> StateT LookingTo IO Void
 makeAndExecuteDecisions config windows = do
   windowsEither <- liftIO $ S.next windows
   case windowsEither of
-    Left _ -> error "yikes my window ended"
+    Left v -> absurd v
     Right (window, remainingWindows) -> do
       lastLookingTo <- get
       let decision = makeDecision window lastLookingTo
@@ -97,6 +99,6 @@ main = do
   let windows = S.delay 30 (S.iterateM (getNextWindow liveConfig) (return firstWindow))
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT (S.effects (makeAndExecuteDecisions liveConfig windows)) (LookingTo Buy)
+  _ <- runStateT ((makeAndExecuteDecisions liveConfig windows)) (LookingTo Buy)
 
   putStrLn "done!"
