@@ -13,12 +13,11 @@ import Coinbase.Exchange.Types
 
 -- Haskell stuff
 import Control.Monad.State
+import Data.Void
 
 -- Streaming stuff
 import Streaming
 import qualified Streaming.Prelude as S
-
-import Data.Void
 
 -- Project stuff
 import Lib
