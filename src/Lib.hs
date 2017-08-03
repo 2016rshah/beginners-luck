@@ -20,6 +20,7 @@ import Graphics.Rendering.Chart.Easy as E
 import Graphics.Rendering.Chart.Backend.Diagrams (toFile)
 
 -- Haskell stuff
+import Data.Monoid (Sum(..))
 import Data.Ratio
 
 -- Beginners luck stuff
@@ -99,11 +100,10 @@ ema (EMA prevEMA) candles@(candle:_) = EMA ((getClosePrice candle - prevEMA) * m
 
 -- | Simple moving average over an array of candles
 sma :: [CoinbaseCandle] -> SMA
-sma [] = SMA 0 
 sma candles = SMA (totalSum candles / numCandles candles)
   where
-    totalSum = (sum . map getClosePrice)
-    numCandles = (fromIntegral . length)
+    totalSum = getSum . foldMap (Sum . getClosePrice)
+    numCandles = fromIntegral . length
 
 -- | Using the old world data computes the next exponential moving average values
 getNextWindow :: World -> IO World
