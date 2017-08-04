@@ -87,9 +87,8 @@ getNextWindow config oldWindow@(Window (shortEMA, longEMA) _) = do
       {- Calculate next EMAs -}
       let shortEMA' = ema shortEMA shortCandles
       let longEMA' = ema longEMA longCandles
-      putStrLn $ ("Short EMA: " ++ show shortEMA' ++ ['\n'] ++ "Long EMA: " ++ show longEMA')
       let recentClosingPrice = getClosePrice recentCandle
-      putStrLn (show recentClosingPrice)
+      putStrLn $ ("---" ++ ['\n'] ++ "Short EMA: " ++ showCost shortEMA' ++ ['\n'] ++ "Long EMA: " ++ showCost longEMA' ++ ['\n'] ++ "Closing Price: " ++ showCost recentClosingPrice)
       return (Window (shortEMA', longEMA') (Price recentClosingPrice))
     (Left err, _) -> failedRequest (show err)
     (_, Left err) -> failedRequest (show err)
@@ -111,8 +110,8 @@ getFirstWindow config = do
   longCandles <- failEither =<< getMostRecentCandles config longNumCandles candleLength
   let shortSMA = sma shortCandles
   let longSMA = sma longCandles
-  putStrLn $ "Short SMA: " ++ show shortSMA
-  putStrLn $ "Long SMA: " ++ show longSMA
+  putStrLn $ "Short SMA: " ++ showCost shortSMA
+  putStrLn $ "Long SMA: " ++ showCost longSMA
   case shortCandles of
     (candle:_) -> do
       let window = case (shortSMA, longSMA) of

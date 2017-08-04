@@ -50,13 +50,13 @@ makeDecision (Window (EMA short, EMA long) _) (LookingTo Sell) =
 -- | but for now just print to see what bot does
 executeDecision :: ExchangeConf -> (Decision, Window) -> LookingTo -> IO LookingTo
 executeDecision _ (Hold, window) lookingTo = do
-  putStrLn ("Held with market price at: " ++ show (unPrice window))
+  putStrLn ("Held with market price at: " ++ showCost (unPrice window))
   return lookingTo
 executeDecision _ (Decision Sell, window) _ = do
-  putStrLn ("Sold at price: " ++ show (unPrice window))
+  putStrLn ("Sold at price: " ++ showCost (unPrice window))
   return (LookingTo Buy)
 executeDecision _ (Decision Buy, window) _ = do
-  putStrLn ("Bought at price: " ++ show (unPrice window))
+  putStrLn ("Bought at price: " ++ showCost (unPrice window))
   return (LookingTo Sell)
 
   -- Variables
@@ -65,6 +65,7 @@ executeDecision _ (Decision Buy, window) _ = do
   -- short length: 10
   -- long length: 30
   -- threshold for putting the sell order
+  -- polling time delay
 
 -- | Tie everything together
 makeAndExecuteDecisions ::
