@@ -75,7 +75,9 @@ makeAndExecuteDecisions ::
 makeAndExecuteDecisions config windows = do
   windowsEither <- liftIO $ S.next windows
   case windowsEither of
-    Left v -> absurd v
+    Left v -> do
+      liftIO $ putStrLn "what"
+      absurd v
     Right (window, remainingWindows) -> do
       lastLookingTo <- get
       let decision = makeDecision window lastLookingTo

@@ -26,23 +26,20 @@ import Types
 
 {----- FUNCTIONS -----}
 
--- | Number of candles you want -> candle interval in minutes -> (timestamp interval, granularity)
--- | For example 20 candles with 5 minute candles gives
-getCandleRequestParams :: NumCandles -> Minutes -> (Int, Int)
-getCandleRequestParams (NumCandles numCandles) (Minutes candleIntervalMinutes) =
-  ((numSeconds * numCandles), numSeconds)
-  where
-    numSeconds = candleIntervalMinutes * 60
+-- | Number of candles you want -> candle interval in seconds -> (timestamp interval, granularity)
+getCandleRequestParams :: NumCandles -> Seconds -> (Int, Int)
+getCandleRequestParams (NumCandles numCandles) (Seconds candleIntervalSeconds) =
+  ((candleIntervalSeconds * numCandles), candleIntervalSeconds)
 
 -- | ExchangeConf: which exchange to run request on
 -- | NumCandles: number of candles to get
--- | Minutes: duration of each candle
+-- | Duration: duration of each candle
 -- | For example you could say `getMostRecentCandles liveConfig (NumCandles 30) (Minutes 2)`
 -- | Which would give the 30 newest candles each spanning 2 minutes over a total of an hour long window
-getMostRecentCandles :: ExchangeConf -> NumCandles -> Minutes
+getMostRecentCandles :: ExchangeConf -> NumCandles -> Seconds
                      -> IO (Either Coinbase.Exchange.Types.ExchangeFailure [CoinbaseCandle])
-getMostRecentCandles conf numCandles candleIntervalMinutes = do
-  let (timeWindow, granularity) = getCandleRequestParams numCandles candleIntervalMinutes
+getMostRecentCandles conf numCandles candleIntervalSeconds = do
+  let (timeWindow, granularity) = getCandleRequestParams numCandles candleIntervalSeconds
   endTime <- (addUTCTime (-apiDelayDuration)) <$> getCurrentTime
   let startTime = addUTCTime (realToFrac (-timeWindow)) endTime
   runExchange conf (getHistory
@@ -97,6 +94,7 @@ getNextWindow config oldWindow@(Window (shortEMA, longEMA) _) = do
     failedRequest :: String -> IO Window
     failedRequest err = do
       putStrLn err
+      putStrLn "got an error, but chugging along anyways"
       return oldWindow
 
 -- | Helper for what to do if the rest of the computations in the program depend on this success

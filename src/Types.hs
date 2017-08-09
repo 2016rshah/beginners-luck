@@ -10,7 +10,6 @@ import Numeric
 import Text.Printf
 
 newtype NumCandles = NumCandles Int
-newtype Minutes = Minutes Int
 
 {----- COST REPRESENTATIONS -----}
 type NumberRepresentation = Rational
@@ -67,8 +66,8 @@ data Window = Window {
 ethUSDticker :: ProductId
 ethUSDticker = ProductId ("ETH-USD")
 
-candleLength :: Minutes
-candleLength = Minutes 2
+candleLength :: Seconds
+candleLength = Seconds (60 * 3)
 
 shortNumCandles :: NumCandles
 shortNumCandles = NumCandles 10
@@ -76,7 +75,8 @@ shortNumCandles = NumCandles 10
 longNumCandles :: NumCandles
 longNumCandles = NumCandles 30
 
+-- Poll every time you should have a new candle
 pollLength :: Seconds
-pollLength = Seconds 120
+pollLength = candleLength
 
 newtype Seconds = Seconds { unSeconds :: Int }
