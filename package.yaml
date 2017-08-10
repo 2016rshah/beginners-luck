@@ -22,6 +22,7 @@ dependencies:
 - streaming
 - time
 - mtl
+- sqlite-simple
 library:
   source-dirs: src
 executables:

@@ -20,6 +20,7 @@ import Coinbase.Exchange.Types
 import Data.Time.Clock
 
 -- Haskell stuff
+import System.IO.Error
 
 -- Beginners luck stuff
 import Types
@@ -75,7 +76,9 @@ sma candles = SMA (totalSum candles / numCandles candles)
 
 -- | Using the old window data computes the next exponential moving average values
 getNextWindow :: ExchangeConf -> Window -> IO Window
-getNextWindow config oldWindow@(Window (shortEMA, longEMA) _) = do
+getNextWindow config oldWindow@(Window (shortEMA, longEMA) _) =
+  {- Making request to API will throw exception if over rate limit, just try again -}
+  flip catchIOError (\_ -> putStrLn "Failed request" >> return oldWindow) $ do
   {- Request info from GDAX API -}
   eitherShortCandles <- getMostRecentCandles config shortNumCandles candleLength
   eitherLongCandles <- getMostRecentCandles config longNumCandles candleLength

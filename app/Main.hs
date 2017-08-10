@@ -19,6 +19,9 @@ import Data.Void
 import Streaming
 import qualified Streaming.Prelude as S
 
+-- Database stuff
+import Database.SQLite.Simple
+
 -- Project stuff
 import Lib
 import Types
@@ -84,6 +87,12 @@ makeAndExecuteDecisions config windows = do
       nextLookingTo <- liftIO $ executeDecision config (decision, window) lastLookingTo
       put nextLookingTo
       makeAndExecuteDecisions config remainingWindows
+
+{----- DATABASE -----}
+
+-- insertWindowIntoDatabase :: Window -> IO ()
+-- insertWindowIntoDatabase
+
 
 {----- MAIN -----}
 
