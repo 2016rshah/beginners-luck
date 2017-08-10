@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 {----- IMPORTS -----}
@@ -14,13 +16,17 @@ import Coinbase.Exchange.Types
 -- Haskell stuff
 import Control.Monad.State
 import Data.Void
+import Data.Text
+
+-- Database stuff
+import Database.SQLite.Simple
 
 -- Streaming stuff
 import Streaming
 import qualified Streaming.Prelude as S
 
--- Database stuff
-import Database.SQLite.Simple
+-- Clock stuff
+import Data.Time
 
 -- Project stuff
 import Lib
@@ -51,15 +57,18 @@ makeDecision (Window (EMA short, EMA long) _) (LookingTo Sell) =
 
 -- | Fill in with actual API calls,
 -- | but for now just print to see what bot does
-executeDecision :: ExchangeConf -> (Decision, Window) -> LookingTo -> IO LookingTo
-executeDecision _ (Hold, window) lookingTo = do
-  putStrLn ("Held with market price at: " ++ showCost (unPrice window))
+executeDecision :: ExchangeConf -> Connection -> (Decision, Window) -> LookingTo -> IO LookingTo
+executeDecision _ conn (Hold, window) lookingTo = do
+  putStrLn ("Held with market price at: " ++ show (unPrice window))
+  insertEntryIntoDatabase conn window lookingTo
   return lookingTo
-executeDecision _ (Decision Sell, window) _ = do
-  putStrLn ("Sold at price: " ++ showCost (unPrice window))
+executeDecision _ conn (Decision Sell, window) lookingTo = do
+  putStrLn ("Sold at price: " ++ show (unPrice window))
+  insertEntryIntoDatabase conn window lookingTo
   return (LookingTo Buy)
-executeDecision _ (Decision Buy, window) _ = do
-  putStrLn ("Bought at price: " ++ showCost (unPrice window))
+executeDecision _ conn (Decision Buy, window) lookingTo = do
+  putStrLn ("Bought at price: " ++ show (unPrice window))
+  insertEntryIntoDatabase conn window lookingTo
   return (LookingTo Sell)
 
   -- Variables
@@ -70,12 +79,21 @@ executeDecision _ (Decision Buy, window) _ = do
   -- threshold for putting the sell order
   -- polling time delay
 
+insertEntryIntoDatabase :: Connection -> Window -> LookingTo -> IO ()
+insertEntryIntoDatabase conn (Window (EMA short, EMA long) (Price price)) lookingTo = do
+  timestamp <- getCurrentTime
+  execute conn "INSERT INTO database (timestamp, short, long, price, position) VALUES (?, ?, ?, ?, ?)" (entry timestamp)
+  where
+    entry :: UTCTime -> (Text, Double, Double, Double, Text)
+    entry ts = (pack (show ts), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
+
 -- | Tie everything together
 makeAndExecuteDecisions ::
   ExchangeConf
+  -> Connection
   -> Stream (Of Window) IO Void
   -> StateT LookingTo IO Void
-makeAndExecuteDecisions config windows = do
+makeAndExecuteDecisions config conn windows = do
   windowsEither <- liftIO $ S.next windows
   case windowsEither of
     Left v -> do
@@ -84,9 +102,9 @@ makeAndExecuteDecisions config windows = do
     Right (window, remainingWindows) -> do
       lastLookingTo <- get
       let decision = makeDecision window lastLookingTo
-      nextLookingTo <- liftIO $ executeDecision config (decision, window) lastLookingTo
+      nextLookingTo <- liftIO $ executeDecision config conn (decision, window) lastLookingTo
       put nextLookingTo
-      makeAndExecuteDecisions config remainingWindows
+      makeAndExecuteDecisions config conn remainingWindows
 
 {----- DATABASE -----}
 
@@ -98,10 +116,12 @@ makeAndExecuteDecisions config windows = do
 
 main :: IO ()
 main = do
-  {- GDAX API setup stuff -}
+  {- setup stuff -}
   mgr <- newManager tlsManagerSettings
   let liveConfig = liveConf mgr
   -- let sandboxConfig = sandboxConf mgr
+  conn <- open "database.db"
+  execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, long REAL, short REAL, price REAL, position TEXT)"
 
   {- Request first round of info from GDAX API -}
   firstWindow <- getFirstWindow liveConfig
@@ -112,6 +132,6 @@ main = do
                 (S.iterateM (getNextWindow liveConfig) (return firstWindow))
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT (makeAndExecuteDecisions liveConfig windows) (LookingTo Buy)
+  _ <- runStateT (makeAndExecuteDecisions liveConfig conn windows) (LookingTo Buy)
 
   putStrLn "done!"

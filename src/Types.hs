@@ -54,6 +54,7 @@ type CoinbaseCandle = Candle
 data Action = Buy | Sell
   deriving Show
 data LookingTo = LookingTo Action
+  deriving Show
 data Decision = Decision Action | Hold
   deriving Show
 

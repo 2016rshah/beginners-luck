@@ -23,6 +23,7 @@ dependencies:
 - time
 - mtl
 - sqlite-simple
+- text >=1.2
 library:
   source-dirs: src
 executables:
