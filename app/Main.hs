@@ -105,10 +105,10 @@ makeAndExecuteDecisions config conn runID windows = do
 insertEntryIntoDatabase :: Connection -> UTCTime -> Window -> LookingTo -> IO ()
 insertEntryIntoDatabase conn runID (Window (EMA short, EMA long) (Price price)) lookingTo = do
   timestamp <- getCurrentTime
-  execute conn "INSERT INTO database (runID, timestamp, short, long, price, position) VALUES (?, ?, ?, ?, ?, ?)" (entry timestamp)
+  execute conn "INSERT INTO database (timestamp, runID, short, long, price, position) VALUES (?, ?, ?, ?, ?, ?)" (entry timestamp)
   where
     entry :: UTCTime -> (Text, Text, Double, Double, Double, Text)
-    entry ts = (pack (show runID, pack (show ts), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
+    entry ts = (pack (show ts), pack (show runID), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
 
 
 {----- MAIN -----}
@@ -120,7 +120,7 @@ main = do
   let liveConfig = liveConf mgr
   -- let sandboxConfig = sandboxConf mgr
   conn <- open "database.db"
-  execute_ conn "CREATE TABLE IF NOT EXISTS database (runID TEXT PRIMARY KEY, timestamp TEXT, long REAL, short REAL, price REAL, position TEXT)"
+  execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, runID TEXT, long REAL, short REAL, price REAL, position TEXT)"
 
   runID <- getCurrentTime
 
