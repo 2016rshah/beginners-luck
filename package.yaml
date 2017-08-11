@@ -12,6 +12,8 @@ ghc-options:
   -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
 default-extensions:
 - FlexibleContexts
+- FlexibleInstances
+- TypeSynonymInstances
 dependencies:
 - base >=4.7 && <5
 - coinbase-exchange
