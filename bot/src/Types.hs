@@ -15,11 +15,11 @@ newtype NumCandles = NumCandles Int
 type NumberRepresentation = Rational
 
 newtype SMA = SMA NumberRepresentation
-  deriving (Show, Eq, Num)
+  deriving (Eq, Num)
 newtype EMA = EMA NumberRepresentation
-  deriving (Show, Eq, Num)
+  deriving (Eq, Num)
 newtype Price = Price NumberRepresentation
-  deriving (Show, Eq, Num)
+  deriving (Eq, Num)
 
 {----- PRETTY PRINTING NUMBERS -----}
 class ShowCost a where
@@ -54,6 +54,7 @@ type CoinbaseCandle = Candle
 data Action = Buy | Sell
   deriving Show
 data LookingTo = LookingTo Action
+  deriving Show
 data Decision = Decision Action | Hold
   deriving Show
 

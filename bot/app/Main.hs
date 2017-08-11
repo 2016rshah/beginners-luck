@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 {----- IMPORTS -----}
@@ -14,10 +16,17 @@ import Coinbase.Exchange.Types
 -- Haskell stuff
 import Control.Monad.State
 import Data.Void
+import Data.Text
+
+-- Database stuff
+import Database.SQLite.Simple
 
 -- Streaming stuff
 import Streaming
 import qualified Streaming.Prelude as S
+
+-- Clock stuff
+import Data.Time
 
 -- Project stuff
 import Lib
@@ -48,15 +57,18 @@ makeDecision (Window (EMA short, EMA long) _) (LookingTo Sell) =
 
 -- | Fill in with actual API calls,
 -- | but for now just print to see what bot does
-executeDecision :: ExchangeConf -> (Decision, Window) -> LookingTo -> IO LookingTo
-executeDecision _ (Hold, window) lookingTo = do
+executeDecision :: ExchangeConf -> Connection -> UTCTime -> (Decision, Window) -> LookingTo -> IO LookingTo
+executeDecision _ conn runID (Hold, window) lookingTo = do
   putStrLn ("Held with market price at: " ++ showCost (unPrice window))
+  insertEntryIntoDatabase conn runID window lookingTo
   return lookingTo
-executeDecision _ (Decision Sell, window) _ = do
+executeDecision _ conn runID (Decision Sell, window) lookingTo = do
   putStrLn ("Sold at price: " ++ showCost (unPrice window))
+  insertEntryIntoDatabase conn runID window lookingTo
   return (LookingTo Buy)
-executeDecision _ (Decision Buy, window) _ = do
+executeDecision _ conn runID (Decision Buy, window) lookingTo = do
   putStrLn ("Bought at price: " ++ showCost (unPrice window))
+  insertEntryIntoDatabase conn runID window lookingTo
   return (LookingTo Sell)
 
   -- Variables
@@ -67,12 +79,22 @@ executeDecision _ (Decision Buy, window) _ = do
   -- threshold for putting the sell order
   -- polling time delay
 
+insertEntryIntoDatabase :: Connection -> UTCTime -> Window -> LookingTo -> IO ()
+insertEntryIntoDatabase conn runID (Window (EMA short, EMA long) (Price price)) lookingTo = do
+  timestamp <- getCurrentTime
+  execute conn "INSERT INTO database (timestamp, runID, short, long, price, position) VALUES (?, ?, ?, ?, ?, ?)" (entry timestamp)
+  where
+    entry :: UTCTime -> (Text, Text, Double, Double, Double, Text)
+    entry ts = (pack (show ts), pack (show runID), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
+
 -- | Tie everything together
 makeAndExecuteDecisions ::
   ExchangeConf
+  -> Connection
+  -> UTCTime
   -> Stream (Of Window) IO Void
   -> StateT LookingTo IO Void
-makeAndExecuteDecisions config windows = do
+makeAndExecuteDecisions config conn runID windows = do
   windowsEither <- liftIO $ S.next windows
   case windowsEither of
     Left v -> do
@@ -81,18 +103,27 @@ makeAndExecuteDecisions config windows = do
     Right (window, remainingWindows) -> do
       lastLookingTo <- get
       let decision = makeDecision window lastLookingTo
-      nextLookingTo <- liftIO $ executeDecision config (decision, window) lastLookingTo
+      nextLookingTo <- liftIO $ executeDecision config conn runID (decision, window) lastLookingTo
       put nextLookingTo
-      makeAndExecuteDecisions config remainingWindows
+      makeAndExecuteDecisions config conn runID remainingWindows
+
+{----- DATABASE -----}
+
+-- insertWindowIntoDatabase :: Window -> IO ()
+-- insertWindowIntoDatabase
+
 
 {----- MAIN -----}
 
 main :: IO ()
 main = do
-  {- GDAX API setup stuff -}
+  {- setup stuff -}
   mgr <- newManager tlsManagerSettings
   let liveConfig = liveConf mgr
+  programStartTime <- getCurrentTime  
   -- let sandboxConfig = sandboxConf mgr
+  conn <- open "database.db"
+  execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, runID TEXT, long REAL, short REAL, price REAL, position TEXT)"
 
   {- Request first round of info from GDAX API -}
   firstWindow <- getFirstWindow liveConfig
@@ -103,6 +134,6 @@ main = do
                 (S.iterateM (getNextWindow liveConfig) (return firstWindow))
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT (makeAndExecuteDecisions liveConfig windows) (LookingTo Buy)
+  _ <- runStateT (makeAndExecuteDecisions liveConfig conn programStartTime windows) (LookingTo Buy)
 
   putStrLn "done!"
