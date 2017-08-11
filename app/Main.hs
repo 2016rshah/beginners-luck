@@ -57,18 +57,18 @@ makeDecision (Window (EMA short, EMA long) _) (LookingTo Sell) =
 
 -- | Fill in with actual API calls,
 -- | but for now just print to see what bot does
-executeDecision :: ExchangeConf -> Connection -> (Decision, Window) -> LookingTo -> IO LookingTo
-executeDecision _ conn (Hold, window) lookingTo = do
+executeDecision :: ExchangeConf -> Connection -> UTCTime -> (Decision, Window) -> LookingTo -> IO LookingTo
+executeDecision _ conn runID (Hold, window) lookingTo = do
   putStrLn ("Held with market price at: " ++ show (unPrice window))
-  insertEntryIntoDatabase conn window lookingTo
+  insertEntryIntoDatabase conn runID window lookingTo
   return lookingTo
-executeDecision _ conn (Decision Sell, window) lookingTo = do
+executeDecision _ conn runID (Decision Sell, window) lookingTo = do
   putStrLn ("Sold at price: " ++ show (unPrice window))
-  insertEntryIntoDatabase conn window lookingTo
+  insertEntryIntoDatabase conn runID window lookingTo
   return (LookingTo Buy)
-executeDecision _ conn (Decision Buy, window) lookingTo = do
+executeDecision _ conn runID (Decision Buy, window) lookingTo = do
   putStrLn ("Bought at price: " ++ show (unPrice window))
-  insertEntryIntoDatabase conn window lookingTo
+  insertEntryIntoDatabase conn runID window lookingTo
   return (LookingTo Sell)
 
   -- Variables
@@ -79,21 +79,15 @@ executeDecision _ conn (Decision Buy, window) lookingTo = do
   -- threshold for putting the sell order
   -- polling time delay
 
-insertEntryIntoDatabase :: Connection -> Window -> LookingTo -> IO ()
-insertEntryIntoDatabase conn (Window (EMA short, EMA long) (Price price)) lookingTo = do
-  timestamp <- getCurrentTime
-  execute conn "INSERT INTO database (timestamp, short, long, price, position) VALUES (?, ?, ?, ?, ?)" (entry timestamp)
-  where
-    entry :: UTCTime -> (Text, Double, Double, Double, Text)
-    entry ts = (pack (show ts), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
 
 -- | Tie everything together
 makeAndExecuteDecisions ::
   ExchangeConf
   -> Connection
+  -> UTCTime
   -> Stream (Of Window) IO Void
   -> StateT LookingTo IO Void
-makeAndExecuteDecisions config conn windows = do
+makeAndExecuteDecisions config conn runID windows = do
   windowsEither <- liftIO $ S.next windows
   case windowsEither of
     Left v -> do
@@ -102,14 +96,19 @@ makeAndExecuteDecisions config conn windows = do
     Right (window, remainingWindows) -> do
       lastLookingTo <- get
       let decision = makeDecision window lastLookingTo
-      nextLookingTo <- liftIO $ executeDecision config conn (decision, window) lastLookingTo
+      nextLookingTo <- liftIO $ executeDecision config conn runID (decision, window) lastLookingTo
       put nextLookingTo
-      makeAndExecuteDecisions config conn remainingWindows
+      makeAndExecuteDecisions config conn runID remainingWindows
 
 {----- DATABASE -----}
 
--- insertWindowIntoDatabase :: Window -> IO ()
--- insertWindowIntoDatabase
+insertEntryIntoDatabase :: Connection -> UTCTime -> Window -> LookingTo -> IO ()
+insertEntryIntoDatabase conn runID (Window (EMA short, EMA long) (Price price)) lookingTo = do
+  timestamp <- getCurrentTime
+  execute conn "INSERT INTO database (runID, timestamp, short, long, price, position) VALUES (?, ?, ?, ?, ?, ?)" (entry timestamp)
+  where
+    entry :: UTCTime -> (Text, Text, Double, Double, Double, Text)
+    entry ts = (pack (show runID, pack (show ts), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
 
 
 {----- MAIN -----}
@@ -121,7 +120,9 @@ main = do
   let liveConfig = liveConf mgr
   -- let sandboxConfig = sandboxConf mgr
   conn <- open "database.db"
-  execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, long REAL, short REAL, price REAL, position TEXT)"
+  execute_ conn "CREATE TABLE IF NOT EXISTS database (runID TEXT PRIMARY KEY, timestamp TEXT, long REAL, short REAL, price REAL, position TEXT)"
+
+  runID <- getCurrentTime
 
   {- Request first round of info from GDAX API -}
   firstWindow <- getFirstWindow liveConfig
@@ -132,6 +133,6 @@ main = do
                 (S.iterateM (getNextWindow liveConfig) (return firstWindow))
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT (makeAndExecuteDecisions liveConfig conn windows) (LookingTo Buy)
+  _ <- runStateT (makeAndExecuteDecisions liveConfig conn runID windows) (LookingTo Buy)
 
   putStrLn "done!"
