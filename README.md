@@ -1,7 +1,6 @@
 # Beginners Luck
 
-> "Every search begins with beginner’s luck."  
-> Paulo Coelho
+> ["Every search begins with beginner’s luck."](https://books.google.com/books?id=FEL8DlqjYEkC&lpg=PP1&vq=luck&pg=PP1#v=onepage&q&f=false)
 
 This project is a bot that automatically buys and sell the [ethereum crypto-currency](https://github.com/ethereum/wiki/wiki/White-Paper) in an effort to make a profit (or at least minimize loss). It uses a [double exponential moving average crossover](http://www.investopedia.com/articles/trading/10/double-exponential-moving-average.asp) strategy.
 
