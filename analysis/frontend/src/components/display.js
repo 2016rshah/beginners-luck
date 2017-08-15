@@ -2,6 +2,13 @@ import React from 'react';
 import { Line } from 'react-chartjs-2';
 import axios from 'axios';
 import _ from 'lodash';
+import styled from 'styled-components';
+
+const StyledProfit = styled.h2`
+  span {
+    color: ${props => props.profit < 0 ? '#ff0000' : '#008000'};
+  }
+`;
 
 const initialState = {
   currentID: 0,
@@ -10,7 +17,6 @@ const initialState = {
   profit: 0,
   numTrades: 0,
   labels: [],
-  numberTrades: 0,
   datasets: [
     {
       label: 'Long SMA',
@@ -93,17 +99,19 @@ const Graph = React.createClass({
 		}, 180000);
 	},
   setNewState(candle){
-    const label = candle.timestamp.slice(0, 19);
+    const label = new Date(candle.timestamp);
     const long = candle.long;
     const short = candle.short;
     const price = candle.price;
     const runID = candle.runID;
     const status = candle.position;
-    /*
+    const action = candle.action;
+
     if (this.state.currentID !== runID) {
-      this.setState(initialState);
+      //this.setState(initialState);
+      this.setState({boughtAt: 0})
     }
-    */
+
     const newLabels = this.state.labels.concat([label])
     const oldDataSets = this.state.datasets;
 
@@ -124,12 +132,12 @@ const Graph = React.createClass({
     let newProfit
     let newBoughtAt
     let numTrades
-    if (this.state.status === status) {
+    if (action === 'hold') {
       newProfit = this.state.profit
       newBoughtAt = this.state.boughtAt
       numTrades = this.state.numTrades;
     } else {
-      if (this.state.status === 'LookingTo Sell') {
+      if (action === 'sold') {
         newProfit = price - this.state.boughtAt;
         newBoughtAt = this.state.boughtAt;
         numTrades = this.state.numTrades + 1;
@@ -184,7 +192,7 @@ const Graph = React.createClass({
         }
       }} />
       <h2>Status: {this.state.status}</h2>
-      <h2>Profit: ${this.state.profit}</h2>
+      <StyledProfit profit={this.state.profit}>Profit: <span>${this.state.profit}</span></StyledProfit>
       <h2>Number of Trades: {this.state.numTrades}</h2>
     </div>
 		);
@@ -203,7 +211,7 @@ export default React.createClass({
         <h2>Beginner's Luck Data</h2>
         <p>
           As a proof of concept, we have the bot tell us when it would buy and when it would sell.
-          Profit is calculated by taking the price it sold at and subtracting the price when it
+          Profit is calculated by taking the price it would have sold at and subtracting the price at which it
           would have been bought.
         </p>
         <Graph />
