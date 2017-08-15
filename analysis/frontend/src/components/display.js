@@ -90,7 +90,7 @@ const Graph = React.createClass({
 
 		setInterval(function(){
       axios.get('http://localhost:3001/newdata').then(response => _this.setNewState(response.data[0]));
-		}, 10000);
+		}, 180000);
 	},
   setNewState(candle){
     const label = candle.timestamp.slice(0, 19);
@@ -144,6 +144,7 @@ const Graph = React.createClass({
       status: status,
       boughtAt: newBoughtAt,
       profit: newProfit,
+      numTrades: numTrades,
       currentID: runID,
       labels: newLabels,
       datasets: newDataSets
@@ -165,13 +166,26 @@ const Graph = React.createClass({
               },
               scaleLabel: {
                 display: true,
-                labelString: 'Date'
+                labelString: 'Timestamp'
+              },
+              ticks: {
+                minRotation: 70,
+              }
+            }
+          ],
+          yAxes: [
+            {
+              scaleLabel: {
+                display: true,
+                labelString: 'Eth Value (USD)'
               }
             }
           ]
         }
       }} />
-      <h2>Profit: {this.state.profit}</h2>
+      <h2>Status: {this.state.status}</h2>
+      <h2>Profit: ${this.state.profit}</h2>
+      <h2>Number of Trades: {this.state.numTrades}</h2>
     </div>
 		);
 	}
@@ -187,6 +201,11 @@ export default React.createClass({
     return (
       <div>
         <h2>Beginner's Luck Data</h2>
+        <p>
+          As a proof of concept, we have the bot tell us when it would buy and when it would sell.
+          Profit is calculated by taking the price it sold at and subtracting the price when it
+          would have been bought.
+        </p>
         <Graph />
       </div>
     );
