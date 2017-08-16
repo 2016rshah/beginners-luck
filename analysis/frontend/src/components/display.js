@@ -1,5 +1,5 @@
 import React from 'react';
-import { Line } from 'react-chartjs-2';
+import { Chart, Line } from 'react-chartjs-2';
 import axios from 'axios';
 import _ from 'lodash';
 import styled from 'styled-components';
@@ -14,6 +14,7 @@ const initialState = {
   currentID: 0,
   status: 'LookingTo Buy',
   boughtAt: 0,
+  currentPrice: 0,
   profit: 0,
   numTrades: 0,
   labels: [],
@@ -86,18 +87,28 @@ const initialState = {
 
 const Graph = React.createClass({
 	displayName: 'Graph',
+
 	componentWillMount(){
 		this.setState(initialState);
     axios.get('http://localhost:3001').then(response => _.map(response.data, this.setNewState));
-
 	},
+
 	componentDidMount(){
 		var _this = this;
 
 		setInterval(function(){
       axios.get('http://localhost:3001/newdata').then(response => _this.setNewState(response.data[0]));
-		}, 180000);
+		}, 10000);
 	},
+
+  resetState() {
+    const newDatasets = _.map(this.state.datasets, dataset =>{
+      return ({
+      ...dataset,
+      data: []})})
+    this.setState({...initialState, datasets: newDatasets});
+  },
+
   setNewState(candle){
     const label = new Date(candle.timestamp);
     const long = candle.long;
@@ -108,12 +119,11 @@ const Graph = React.createClass({
     const action = candle.action;
 
     if (this.state.currentID !== runID) {
-      //this.setState(initialState);
-      this.setState({boughtAt: 0})
+      this.resetState();
     }
 
     const newLabels = this.state.labels.concat([label])
-    const oldDataSets = this.state.datasets;
+    const oldDataSets = this.state.datasets.slice();
 
     var newDataSets = _.map(oldDataSets, oldDataSet => {
       let data;
@@ -152,10 +162,11 @@ const Graph = React.createClass({
       status: status,
       boughtAt: newBoughtAt,
       profit: newProfit,
+      currentPrice: price,
       numTrades: numTrades,
       currentID: runID,
       labels: newLabels,
-      datasets: newDataSets
+      datasets: newDataSets,
     };
 
     this.setState(newState);
@@ -163,7 +174,9 @@ const Graph = React.createClass({
 	render() {
 		return (
       <div>
-			<Line data={this.state} options={{
+			<Line
+        data={this.state}
+        options={{
         scales: {
           xAxes: [
             {
@@ -192,7 +205,12 @@ const Graph = React.createClass({
         }
       }} />
       <h2>Status: {this.state.status}</h2>
-      <StyledProfit profit={this.state.profit}>Profit: <span>${this.state.profit}</span></StyledProfit>
+      <StyledProfit>
+        Current Run Status: <span>
+          ${(this.state.status === 'LookingTo Sell') ? (this.state.currentPrice - this.state.boughtAt).toFixed(2) : 'Not in the game'}
+        </span>
+      </StyledProfit>
+      <StyledProfit profit={this.state.profit}>Profit: <span>${(this.state.profit).toFixed(2)}</span></StyledProfit>
       <h2>Number of Trades: {this.state.numTrades}</h2>
     </div>
 		);
@@ -203,7 +221,7 @@ const Graph = React.createClass({
 
 
 export default React.createClass({
-  displayName: 'RandomizedDataLineExample',
+  displayName: 'BeginnersLuckData',
 
   render() {
     return (
