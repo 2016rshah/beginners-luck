@@ -56,3 +56,7 @@ cabal.config
 *.prof
 *.aux
 *.hp
+
+# JAVASCRIPT
+
+node_modules/
