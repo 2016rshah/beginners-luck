@@ -20,7 +20,8 @@ import Coinbase.Exchange.Types
 import Data.Time.Clock
 
 -- Haskell stuff
-import System.IO.Error
+import Control.Exception (catch)
+import Network.HTTP.Client (HttpException)
 
 -- Beginners luck stuff
 import Types
@@ -78,22 +79,25 @@ sma candles = SMA (totalSum candles / numCandles candles)
 getNextWindow :: ExchangeConf -> Window -> IO Window
 getNextWindow config oldWindow@(Window (shortEMA, longEMA) _) =
   {- Making request to API will throw exception if over rate limit, just try again -}
-  flip catchIOError (\_ -> putStrLn "Failed request" >> return oldWindow) $ do
-  {- Request info from GDAX API -}
-  eitherShortCandles <- getMostRecentCandles config shortNumCandles candleLength
-  eitherLongCandles <- getMostRecentCandles config longNumCandles candleLength
-  case (eitherShortCandles, eitherLongCandles) of
-    (Right shortCandles@(recentCandle:_), Right longCandles) -> do
-      {- Calculate next EMAs -}
-      let shortEMA' = ema shortEMA shortCandles
-      let longEMA' = ema longEMA longCandles
-      let recentClosingPrice = getClosePrice recentCandle
-      putStrLn $ ("---" ++ ['\n'] ++ "Short EMA: " ++ showCost shortEMA' ++ ['\n'] ++ "Long EMA: " ++ showCost longEMA' ++ ['\n'] ++ "Closing Price: " ++ showCost recentClosingPrice)
-      return (Window (shortEMA', longEMA') (Price recentClosingPrice))
-    (Left err, _) -> failedRequest (show err)
-    (_, Left err) -> failedRequest (show err)
-    _ -> failedRequest "No candles returned, make sure you are not using sandbox config."
+  flip catch handler $ do
+    {- Request info from GDAX API -}
+    eitherShortCandles <- getMostRecentCandles config shortNumCandles candleLength
+    eitherLongCandles <- getMostRecentCandles config longNumCandles candleLength
+    case (eitherShortCandles, eitherLongCandles) of
+      (Right shortCandles@(recentCandle:_), Right longCandles) -> do
+        {- Calculate next EMAs -}
+        let shortEMA' = ema shortEMA shortCandles
+        let longEMA' = ema longEMA longCandles
+        let recentClosingPrice = getClosePrice recentCandle
+        putStrLn $ ("---" ++ ['\n'] ++ "Short EMA: " ++ showCost shortEMA' ++ ['\n'] ++ "Long EMA: " ++ showCost longEMA' ++ ['\n'] ++ "Closing Price: " ++ showCost recentClosingPrice)
+        return (Window (shortEMA', longEMA') (Price recentClosingPrice))
+      (Left err, _) -> failedRequest (show err)
+      (_, Left err) -> failedRequest (show err)
+      _ -> failedRequest "No candles returned, make sure you are not using sandbox config."
   where
+    handler :: HttpException -> IO Window
+    handler _ = putStrLn "Failed Request; Retrying" >> return oldWindow
+
     failedRequest :: String -> IO Window
     failedRequest err = do
       putStrLn err
