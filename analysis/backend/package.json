@@ -1,0 +1,45 @@
+{
+  "dependencies": {
+    "babel": "^6.23.0",
+    "babel-cli": "^6.24.1",
+    "babel-eslint": "^7.2.3",
+    "babel-plugin-module-resolver": "^2.7.1",
+    "babel-preset-env": "^1.5.1",
+    "babel-preset-stage-0": "^6.24.1",
+    "babel-register": "^6.24.1",
+    "bluebird": "^3.5.0",
+    "express": "^4.15.4",
+    "node.js": "^0.0.0",
+    "sqlite": "^2.8.0",
+    "sqlite3": "^3.1.9"
+  },
+  "scripts": {
+    "start": "babel-node database.js"
+  },
+  "babel": {
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ],
+      "stage-0"
+    ],
+    "plugins": [
+      [
+        "module-resolver",
+        {
+          "root": [
+            "."
+          ],
+          "alias": {
+            "app": "./database.js"
+          }
+        }
+      ]
+    ]
+  }
+}

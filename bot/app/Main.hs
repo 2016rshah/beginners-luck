@@ -60,15 +60,15 @@ makeDecision (Window (EMA short, EMA long) _) (LookingTo Sell) =
 executeDecision :: ExchangeConf -> Connection -> UTCTime -> (Decision, Window) -> LookingTo -> IO LookingTo
 executeDecision _ conn runID (Hold, window) lookingTo = do
   putStrLn ("Held with market price at: " ++ showCost (unPrice window))
-  insertEntryIntoDatabase conn runID window lookingTo
+  insertEntryIntoDatabase conn runID window lookingTo "hold"
   return lookingTo
 executeDecision _ conn runID (Decision Sell, window) lookingTo = do
   putStrLn ("Sold at price: " ++ showCost (unPrice window))
-  insertEntryIntoDatabase conn runID window lookingTo
+  insertEntryIntoDatabase conn runID window lookingTo "sold"
   return (LookingTo Buy)
 executeDecision _ conn runID (Decision Buy, window) lookingTo = do
   putStrLn ("Bought at price: " ++ showCost (unPrice window))
-  insertEntryIntoDatabase conn runID window lookingTo
+  insertEntryIntoDatabase conn runID window lookingTo "bought"
   return (LookingTo Sell)
 
   -- Variables
@@ -79,13 +79,13 @@ executeDecision _ conn runID (Decision Buy, window) lookingTo = do
   -- threshold for putting the sell order
   -- polling time delay
 
-insertEntryIntoDatabase :: Connection -> UTCTime -> Window -> LookingTo -> IO ()
-insertEntryIntoDatabase conn runID (Window (EMA short, EMA long) (Price price)) lookingTo = do
+insertEntryIntoDatabase :: Connection -> UTCTime -> Window -> LookingTo -> Text -> IO ()
+insertEntryIntoDatabase conn runID (Window (EMA short, EMA long) (Price price)) lookingTo action = do
   timestamp <- getCurrentTime
-  execute conn "INSERT INTO database (timestamp, runID, short, long, price, position) VALUES (?, ?, ?, ?, ?, ?)" (entry timestamp)
+  execute conn "INSERT INTO database (timestamp, runID, short, long, price, position, action) VALUES (?, ?, ?, ?, ?, ?, ?)" (entry timestamp)
   where
-    entry :: UTCTime -> (Text, Text, Double, Double, Double, Text)
-    entry ts = (pack (show ts), pack (show runID), fromRational short, fromRational long, fromRational price, pack (show lookingTo))
+    entry :: UTCTime -> (Text, Text, Double, Double, Double, Text, Text)
+    entry ts = (pack (show ts), pack (show runID), fromRational short, fromRational long, fromRational price, pack (show lookingTo), action)
 
 -- | Tie everything together
 makeAndExecuteDecisions ::
@@ -120,10 +120,10 @@ main = do
   {- setup stuff -}
   mgr <- newManager tlsManagerSettings
   let liveConfig = liveConf mgr
-  programStartTime <- getCurrentTime  
+  programStartTime <- getCurrentTime
   -- let sandboxConfig = sandboxConf mgr
   conn <- open "database.db"
-  execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, runID TEXT, long REAL, short REAL, price REAL, position TEXT)"
+  execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, runID TEXT, long REAL, short REAL, price REAL, position TEXT, action TEXT)"
 
   {- Request first round of info from GDAX API -}
   firstWindow <- getFirstWindow liveConfig
