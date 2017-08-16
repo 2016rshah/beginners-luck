@@ -109,7 +109,7 @@ const Graph = React.createClass({
 
 		setInterval(function(){
       axios.get('http://localhost:3001/newdata').then(response => _this.setNewState(response.data[0]));
-		}, 10000);
+		}, 180000);
 	},
 
   resetState() {
