@@ -159,7 +159,6 @@ const Graph = React.createClass({
 
   setNewState(candle){
     const label = new Date(candle.timestamp);
-    console.log(label);
     const long = candle.long;
     const short = candle.short;
     const price = candle.price;
