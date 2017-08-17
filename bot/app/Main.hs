@@ -107,12 +107,6 @@ makeAndExecuteDecisions config conn runID windows = do
       put nextLookingTo
       makeAndExecuteDecisions config conn runID remainingWindows
 
-{----- DATABASE -----}
-
--- insertWindowIntoDatabase :: Window -> IO ()
--- insertWindowIntoDatabase
-
-
 {----- MAIN -----}
 
 main :: IO ()
@@ -126,12 +120,17 @@ main = do
   execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, runID TEXT, long REAL, short REAL, price REAL, position TEXT, action TEXT)"
 
   {- Request first round of info from GDAX API -}
-  firstWindow <- getFirstWindow liveConfig
+  firstWindow <- getFirstWindowFromNow liveConfig
 
   {- Construct the stream of windows based on some delay -}
   let windows = S.delay
                 (fromIntegral (unSeconds pollLength))
-                (S.iterateM (getNextWindow liveConfig) (return firstWindow))
+                (S.iterateM (getNextWindowFromNow liveConfig) (return firstWindow))
+
+  --timeNow <- getCurrentTime
+  --let timeBefore = addUTCTime (-(60 * 60)) timeNow
+  --let intervals = getTimeIntervals (30) timeBefore timeNow
+
 
   {- Run an infinite loop to make and execute decisions based on market data -}
   _ <- runStateT (makeAndExecuteDecisions liveConfig conn programStartTime windows) (LookingTo Buy)
