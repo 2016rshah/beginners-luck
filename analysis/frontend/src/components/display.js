@@ -6,6 +6,12 @@ import styled from 'styled-components';
 
 import verticalLinePlugin from './verticalLinePlugin';
 
+const priceColor = 'rgba(117, 117, 117, 1)';
+const shortColor = 'rgba(133, 122, 187, 1)';
+const longColor = 'rgba(76, 195, 138, 1)';
+const boughtColor = 'rgba(140, 186, 240, 1)';
+const soldColor = 'rgba(182, 103, 160, 1)';
+
 const StyledProfit = styled.h2`
   span {
     color: ${props => (props.profit < 0) ? '#ff0000' : '#008000'};
@@ -52,17 +58,17 @@ const initialState = {
       label: 'Long EMA',
       fill: false,
       lineTension: 0.1,
-      backgroundColor: 'rgba(108, 168, 198, 0.4)',
-      borderColor: 'rgba(108, 168, 198, 1)',
+      backgroundColor: 'rgba(76, 195, 138, 0.4)',
+      borderColor: longColor,
       borderCapStyle: 'butt',
       borderDash: [],
       borderDashOffset: 0.0,
       borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(108, 168, 198, 1)',
-      pointBackgroundColor: '#fff',
+      pointBorderColor: longColor,
+      pointBackgroundColor: longColor,
       pointBorderWidth: 1,
       pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(108, 168, 198, 1)',
+      pointHoverBackgroundColor: longColor,
       pointHoverBorderColor: 'rgba(220,220,220,1)',
       pointHoverBorderWidth: 2,
       pointRadius: 1,
@@ -73,18 +79,18 @@ const initialState = {
       label: 'Short EMA',
       fill: false,
       lineTension: 0.1,
-      backgroundColor: 'rgba(222, 99, 163, 0.4)',
-      borderColor: 'rgba(222, 99, 163, 1)',
+      backgroundColor: 'rgba(133, 122, 187, 0.4)',
+      borderColor: shortColor,
       borderCapStyle: 'butt',
       borderDash: [],
       borderDashOffset: 0.0,
       borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(222, 99, 163, 1)',
-      pointBackgroundColor: '#fff',
+      pointBorderColor: shortColor,
+      pointBackgroundColor: shortColor,
       pointBorderWidth: 1,
       pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(222, 99, 163, 1)',
-      pointHoverBorderColor: 'rgba(222, 99, 163, 1)',
+      pointHoverBackgroundColor: shortColor,
+      pointHoverBorderColor: 'rgba(220,220,220,1)',
       pointHoverBorderWidth: 2,
       pointRadius: 1,
       pointHitRadius: 10,
@@ -94,17 +100,59 @@ const initialState = {
       label: 'Price',
       fill: true,
       lineTension: 0.1,
-      backgroundColor: 'rgba(83, 184, 165, 1)',
-      borderColor: 'rgba(83, 184, 165, 1)',
+      backgroundColor: priceColor,
+      borderColor: priceColor,
       borderCapStyle: 'butt',
       borderDash: [],
       borderDashOffset: 0.0,
       borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(83, 184, 165, 1)',
-      pointBackgroundColor: '#fff',
+      pointBorderColor: priceColor,
+      pointBackgroundColor: priceColor,
       pointBorderWidth: 1,
       pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(83, 184, 165, 1)',
+      pointHoverBackgroundColor: priceColor,
+      pointHoverBorderColor: 'rgba(220,220,220,1)',
+      pointHoverBorderWidth: 2,
+      pointRadius: 1,
+      pointHitRadius: 10,
+      data: []
+    },
+    {
+      label: 'Bought',
+      fill: false,
+      lineTension: 0.1,
+      backgroundColor: 'rgba(140, 186, 240, 0.4)',
+      borderColor: boughtColor,
+      borderCapStyle: 'butt',
+      borderDash: [],
+      borderDashOffset: 0.0,
+      borderJoinStyle: 'miter',
+      pointBorderColor: boughtColor,
+      pointBackgroundColor: boughtColor,
+      pointBorderWidth: 1,
+      pointHoverRadius: 5,
+      pointHoverBackgroundColor: boughtColor,
+      pointHoverBorderColor: 'rgba(220,220,220,1)',
+      pointHoverBorderWidth: 2,
+      pointRadius: 1,
+      pointHitRadius: 10,
+      data: []
+    },
+    {
+      label: 'Sold',
+      fill: false,
+      lineTension: 0.1,
+      backgroundColor: 'rgba(182, 103, 160, 0.4)',
+      borderColor: soldColor,
+      borderCapStyle: 'butt',
+      borderDash: [],
+      borderDashOffset: 0.0,
+      borderJoinStyle: 'miter',
+      pointBorderColor: soldColor,
+      pointBackgroundColor: soldColor,
+      pointBorderWidth: 1,
+      pointHoverRadius: 5,
+      pointHoverBackgroundColor: soldColor,
       pointHoverBorderColor: 'rgba(220,220,220,1)',
       pointHoverBorderWidth: 2,
       pointRadius: 1,
@@ -122,8 +170,19 @@ const Graph = React.createClass({
     axios.get('http://localhost:3001').then(response => _.map(response.data, this.setNewState));
     Chart.pluginService.register({
       afterDatasetsDraw: function (chart, easing) {
+        const active = {
+          bought: true,
+          sold: true,
+        }
+        chart.legend.legendItems.forEach(leg => {
+          if (leg.text ==='Sold' && leg.hidden === true) {
+            active.sold = false
+          } else if (leg.text === 'Bought' && leg.hidden === true) {
+            active.bought = false
+          }
+        });
         if (chart.config.data.verticalLines) {
-            chart.config.data.verticalLines.forEach(pointIndex => verticalLinePlugin.renderVerticalLine(chart, pointIndex));
+            chart.config.data.verticalLines.forEach(pointer => verticalLinePlugin.renderVerticalLine(chart, pointer, active));
         }
       },
       beforeDraw: function (chart, easing) {
@@ -202,13 +261,13 @@ const Graph = React.createClass({
         newProfit = price - this.state.boughtAt;
         newBoughtAt = this.state.boughtAt;
         numTrades = this.state.numTrades + 1;
-        vertLines = vertLines.concat([this.state.numCandles]);
+        vertLines = vertLines.concat([[this.state.numCandles, 'sold']]);
         status = 'Looking To Buy'
       } else {
         newProfit = this.state.profit;
         newBoughtAt = price;
         numTrades = this.state.numTrades;
-        vertLines = vertLines.concat([this.state.numCandles]);
+        vertLines = vertLines.concat([[this.state.numCandles, 'bought']]);
         status = 'Looking To Sell'
       }
     }
@@ -234,6 +293,13 @@ const Graph = React.createClass({
 			<Line
         data={this.state}
         options={{
+          title: {
+            display: true,
+            fontStyle: 'bold',
+            text: 'ETH Value over Time',
+            fontColor: '#000',
+            fontSize: 30
+          },
           chartArea: {
             backgroundColor: 'rgba(78, 78, 78, 1)'
           },
@@ -270,7 +336,7 @@ const Graph = React.createClass({
                 },
                 scaleLabel: {
                   display: true,
-                  labelString: 'Eth Value (USD)',
+                  labelString: 'ETH Value (USD)',
                   fontStyle: 'bold',
                   fontColor: '#000'
                 }
