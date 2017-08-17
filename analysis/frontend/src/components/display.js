@@ -8,7 +8,32 @@ import verticalLinePlugin from './verticalLinePlugin';
 
 const StyledProfit = styled.h2`
   span {
-    color: ${props => (props.profit < 0 && props.status === 'Looking To Sell') ? '#ff0000' : '#008000'};
+    color: ${props => (props.profit < 0) ? '#ff0000' : '#008000'};
+  }
+`;
+
+const Wrapper = styled.div`
+  margin: 50px 50px;
+  font-family: sans-serif;
+  font-size: large;
+  display: flex;
+  justify-content: space-between;
+`;
+
+const Container = styled.div`
+`;
+
+const Title = styled.div`
+  font-size: small;
+  color: #8f8f8f;
+`;
+
+const Info = styled.div`
+  font-weight: bold;
+  margin: 30px 0;
+
+  p {
+    color: #31e2c7;
   }
 `;
 
@@ -24,20 +49,20 @@ const initialState = {
   labels: [],
   datasets: [
     {
-      label: 'Long SMA',
+      label: 'Long EMA',
       fill: false,
       lineTension: 0.1,
-      backgroundColor: 'rgba(75,192,192,0.4)',
-      borderColor: 'rgba(75,192,192,1)',
+      backgroundColor: 'rgba(108, 168, 198, 0.4)',
+      borderColor: 'rgba(108, 168, 198, 1)',
       borderCapStyle: 'butt',
       borderDash: [],
       borderDashOffset: 0.0,
       borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(75,192,192,1)',
+      pointBorderColor: 'rgba(108, 168, 198, 1)',
       pointBackgroundColor: '#fff',
       pointBorderWidth: 1,
       pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(75,192,192,1)',
+      pointHoverBackgroundColor: 'rgba(108, 168, 198, 1)',
       pointHoverBorderColor: 'rgba(220,220,220,1)',
       pointHoverBorderWidth: 2,
       pointRadius: 1,
@@ -45,21 +70,21 @@ const initialState = {
       data: []
     },
     {
-      label: 'Short SMA',
+      label: 'Short EMA',
       fill: false,
       lineTension: 0.1,
-      backgroundColor: 'rgba(180, 58, 146, 0.4)',
-      borderColor: 'rgba(180, 58, 146, 1)',
+      backgroundColor: 'rgba(222, 99, 163, 0.4)',
+      borderColor: 'rgba(222, 99, 163, 1)',
       borderCapStyle: 'butt',
       borderDash: [],
       borderDashOffset: 0.0,
       borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(180, 58, 146, 1)',
+      pointBorderColor: 'rgba(222, 99, 163, 1)',
       pointBackgroundColor: '#fff',
       pointBorderWidth: 1,
       pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(180, 58, 146, 1)',
-      pointHoverBorderColor: 'rgba(220,220,220,1)',
+      pointHoverBackgroundColor: 'rgba(222, 99, 163, 1)',
+      pointHoverBorderColor: 'rgba(222, 99, 163, 1)',
       pointHoverBorderWidth: 2,
       pointRadius: 1,
       pointHitRadius: 10,
@@ -67,19 +92,19 @@ const initialState = {
     },
     {
       label: 'Price',
-      fill: false,
+      fill: true,
       lineTension: 0.1,
-      backgroundColor: 'rgba(76, 158, 59, 0.4)',
-      borderColor: 'rgba(76, 158, 59, 1)',
+      backgroundColor: 'rgba(83, 184, 165, 1)',
+      borderColor: 'rgba(83, 184, 165, 1)',
       borderCapStyle: 'butt',
       borderDash: [],
       borderDashOffset: 0.0,
       borderJoinStyle: 'miter',
-      pointBorderColor: 'rgba(76, 158, 59, 1)',
+      pointBorderColor: 'rgba(83, 184, 165, 1)',
       pointBackgroundColor: '#fff',
       pointBorderWidth: 1,
       pointHoverRadius: 5,
-      pointHoverBackgroundColor: 'rgba(76, 158, 59, 1)',
+      pointHoverBackgroundColor: 'rgba(83, 184, 165, 1)',
       pointHoverBorderColor: 'rgba(220,220,220,1)',
       pointHoverBorderWidth: 2,
       pointRadius: 1,
@@ -99,6 +124,18 @@ const Graph = React.createClass({
       afterDatasetsDraw: function (chart, easing) {
         if (chart.config.data.verticalLines) {
             chart.config.data.verticalLines.forEach(pointIndex => verticalLinePlugin.renderVerticalLine(chart, pointIndex));
+        }
+      },
+      beforeDraw: function (chart, easing) {
+        if (chart.config.options.chartArea && chart.config.options.chartArea.backgroundColor) {
+            var helpers = Chart.helpers;
+            var ctx = chart.chart.ctx;
+            var chartArea = chart.chartArea;
+
+            ctx.save();
+            ctx.fillStyle = chart.config.options.chartArea.backgroundColor;
+            ctx.fillRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+            ctx.restore();
         }
       }
     })
@@ -137,9 +174,9 @@ const Graph = React.createClass({
 
     var newDataSets = _.map(oldDataSets, oldDataSet => {
       let data;
-      if (oldDataSet.label === 'Short SMA') {
+      if (oldDataSet.label === 'Short EMA') {
         data = short
-      } else if (oldDataSet.label === 'Long SMA') {
+      } else if (oldDataSet.label === 'Long EMA') {
         data = long
       } else if (oldDataSet.label === 'Price') {
         data = price
@@ -197,45 +234,72 @@ const Graph = React.createClass({
 			<Line
         data={this.state}
         options={{
-        scales: {
-          xAxes: [
-            {
-              type: 'time',
-              time: {
-                tooltipFormat: 'll HH:mm',
-                displayFormat: 'll HH:mm:'
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Timestamp'
-              },
-              ticks: {
-                minRotation: 70,
+          chartArea: {
+            backgroundColor: 'rgba(78, 78, 78, 1)'
+          },
+          scales: {
+            xAxes: [
+              {
+                type: 'time',
+                time: {
+                  unit: 'minute',
+                  tooltipFormat: 'll HH:mm',
+                  displayFormats: {
+                    millisecond: 'h:mm a',
+                    second: 'h:mm a',
+                    minute: 'h:mm a',
+                    hour: 'h:mm a',
+                    day: 'll h:mm a',
+                  },
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Timestamp',
+                  fontStyle: 'bold',
+                  fontColor: '#000'
+                },
+                gridLines: {
+                  display: false,
+                }
               }
-            }
-          ],
-          yAxes: [
-            {
-              scaleLabel: {
-                display: true,
-                labelString: 'Eth Value (USD)'
+            ],
+            yAxes: [
+              {
+                gridLines:{
+                  color: 'rgba(145, 143, 143, 1)'
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Eth Value (USD)',
+                  fontStyle: 'bold',
+                  fontColor: '#000'
+                }
               }
-            }
-          ]
-        }
+            ]
+          }
       }} />
-      <h2>Status: {this.state.status}</h2>
-      <StyledProfit
-        profit={this.state.currentPrice - this.state.boughtAt}
-        status={this.state.status}>
-        Current Run Status: <span>
-          {(this.state.status === 'Looking To Sell') ? `$${(this.state.currentPrice - this.state.boughtAt).toFixed(2)}` : 'Not in the game'}
-        </span>
-      </StyledProfit>
-      <StyledProfit profit={this.state.profit} status="Looking To Sell">
-        Profit: <span>${(this.state.profit).toFixed(2)}</span>
-      </StyledProfit>
-      <h2>Number of Trades: {this.state.numTrades}</h2>
+      <Wrapper>
+        <Container>
+          <Title>
+            Status
+          </Title>
+          <Info>
+            {this.state.status}
+          </Info>
+        </Container>
+        <Container>
+          <Title>Current Run Status</Title>
+          <Info><p>{(this.state.status === 'Looking To Sell') ? `$${(this.state.currentPrice - this.state.boughtAt).toFixed(2)}` : 'Not in the game'}</p></Info>
+        </Container>
+        <Container>
+          <Title>Net Profit/Loss</Title>
+          <Info><p>${(this.state.profit).toFixed(2)}</p></Info>
+        </Container>
+        <Container>
+          <Title>Number of Trades</Title>
+          <Info>{this.state.numTrades}</Info>
+        </Container>
+      </Wrapper>
     </div>
 		);
 	}
@@ -250,12 +314,6 @@ export default React.createClass({
   render() {
     return (
       <div>
-        <h2>Beginner's Luck Data</h2>
-        <p>
-          As a proof of concept, we have the bot tell us when it would buy and when it would sell.
-          Profit is calculated by taking the price it would have sold at and subtracting the price at which it
-          would have been bought.
-        </p>
         <Graph />
       </div>
     );

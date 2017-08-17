@@ -5,20 +5,25 @@ const verticalLinePlugin = {
     return data[pointIndex]._model.x;
   },
   renderVerticalLine: function (chartInstance, pointIndex) {
-      const lineLeftOffset = this.getLinePosition(chartInstance, pointIndex);
-      const scale = chartInstance.scales['y-axis-0'];
-      const context = chartInstance.chart.ctx;
+    const lineLeftOffset = this.getLinePosition(chartInstance, pointIndex);
+    const scale = chartInstance.scales['y-axis-0'];
+    const context = chartInstance.chart.ctx;
 
-      // render vertical line
-      context.beginPath();
-      context.strokeStyle = '#ff0000';
-      context.moveTo(lineLeftOffset, scale.top);
-      context.lineTo(lineLeftOffset, scale.bottom);
-      context.stroke();
+    // render vertical line
+    context.beginPath();
+    context.strokeStyle = '#ff0000';
+    context.moveTo(lineLeftOffset, scale.top);
+    context.lineTo(lineLeftOffset, scale.bottom);
+    context.stroke();
 
-      // write label
-      context.fillStyle = "#ff0000";
-      context.textAlign = 'center';
+    // write label
+    context.save()
+    context.rotate(-Math.PI/2);
+    //context.moveTo(-scale.top, lineLeftOffset);
+    context.fillStyle = "#ff0000";
+    context.textAlign = 'center';
+    context.fillText('Bought', -(scale.top - scale.bottom / 2 + scale.bottom), lineLeftOffset);
+    context.restore();
   }
 }
 
