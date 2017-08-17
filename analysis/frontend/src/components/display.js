@@ -99,7 +99,7 @@ const initialState = {
     {
       label: 'Price',
       fill: true,
-      lineTension: 0.1,
+      lineTension: .1,
       backgroundColor: priceColor,
       borderColor: priceColor,
       borderCapStyle: 'butt',
@@ -260,7 +260,7 @@ const Graph = React.createClass({
       status = this.state.status
     } else {
       if (action === 'sold') {
-        newProfit = price - this.state.boughtAt;
+        newProfit = (price - this.state.boughtAt).toFixed(2);
         newBoughtAt = this.state.boughtAt;
         numTrades = this.state.numTrades + 1;
         vertLines = vertLines.concat([[this.state.numCandles, 'sold']]);
