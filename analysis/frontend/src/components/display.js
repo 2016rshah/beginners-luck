@@ -240,9 +240,11 @@ const Graph = React.createClass({
       } else if (oldDataSet.label === 'Price') {
         data = price
       }
-
-      const newData = oldDataSet.data.concat([data])
-      return {...oldDataSet, data: newData}
+      if (data) {
+        const newData = oldDataSet.data.concat([data.toFixed(2)])
+        return {...oldDataSet, data: newData}
+      }
+      return {...oldDataSet, data: oldDataSet.data.concat([data])}
     })
 
     let newProfit;
@@ -309,7 +311,7 @@ const Graph = React.createClass({
                 type: 'time',
                 time: {
                   unit: 'minute',
-                  tooltipFormat: 'll HH:mm',
+                  tooltipFormat: 'll h:mm a',
                   displayFormats: {
                     millisecond: 'h:mm a',
                     second: 'h:mm a',
@@ -355,11 +357,11 @@ const Graph = React.createClass({
         </Container>
         <Container>
           <Title>Current Run Status</Title>
-          <Info><p>{(this.state.status === 'Looking To Sell') ? `$${(this.state.currentPrice - this.state.boughtAt).toFixed(2)}` : 'Not in the game'}</p></Info>
+          <Info><p>{(this.state.status === 'Looking To Sell') ? `$${this.state.currentPrice - this.state.boughtAt}` : 'Not in the game'}</p></Info>
         </Container>
         <Container>
           <Title>Net Profit/Loss</Title>
-          <Info><p>${(this.state.profit).toFixed(2)}</p></Info>
+          <Info><p>${this.state.profit}</p></Info>
         </Container>
         <Container>
           <Title>Number of Trades</Title>
