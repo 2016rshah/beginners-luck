@@ -27,7 +27,7 @@ import qualified Streaming.Prelude as S
 
 -- Clock stuff
 import Data.Time
-
+import Control.Concurrent
 -- Project stuff
 import Lib
 import Types
@@ -107,6 +107,31 @@ makeAndExecuteDecisions config conn runID windows = do
       put nextLookingTo
       makeAndExecuteDecisions config conn runID remainingWindows
 
+makeAndExecuteHistoricDecisions ::
+  ExchangeConf ->
+  Connection ->
+  UTCTime ->
+  Stream (Of Window) IO () ->
+  StateT LookingTo IO ()
+makeAndExecuteHistoricDecisions config conn runID windows = do
+  windowsEither <- liftIO $ S.next windows
+  case windowsEither of
+    Left w -> return w
+    Right (window, remainingWindows) -> do
+      lastLookingTo <- get
+      let decision = makeDecision window lastLookingTo
+      nextLookingTo <- liftIO $ executeDecision config conn runID (decision, window) lastLookingTo
+      put nextLookingTo
+      makeAndExecuteHistoricDecisions config conn runID remainingWindows
+
+getSteps :: ExchangeConf -> [UTCTime] -> Window -> IO [Window]
+getSteps conf (time:times) w = do
+  threadDelay 5000000
+  nextWindow <- getNextWindow conf w time
+  nextWindows <- getSteps conf times nextWindow
+  return (nextWindow:nextWindows)
+getSteps _ [] w = return []
+
 {----- MAIN -----}
 
 main :: IO ()
@@ -120,19 +145,23 @@ main = do
   execute_ conn "CREATE TABLE IF NOT EXISTS database (timestamp TEXT PRIMARY KEY, runID TEXT, long REAL, short REAL, price REAL, position TEXT, action TEXT)"
 
   {- Request first round of info from GDAX API -}
-  firstWindow <- getFirstWindowFromNow liveConfig
+  -- firstWindow <- getFirstWindowFromNow liveConfig
 
   {- Construct the stream of windows based on some delay -}
-  let windows = S.delay
-                (fromIntegral (unSeconds pollLength))
-                (S.iterateM (getNextWindowFromNow liveConfig) (return firstWindow))
+  -- let windows = S.delay
+  --               (fromIntegral (unSeconds pollLength))
+  --               (S.iterateM (getNextWindowFromNow liveConfig) (return firstWindow))
 
-  --timeNow <- getCurrentTime
-  --let timeBefore = addUTCTime (-(60 * 60)) timeNow
-  --let intervals = getTimeIntervals (30) timeBefore timeNow
-
+  timeNow <- getCurrentTime
+  let timeBefore = addUTCTime (-(90000)) timeNow
+  let (interval:intervals) = getTimeIntervals (180) timeBefore timeNow
+  firstHistoricWindow <- getFirstWindow liveConfig interval
+  historicWindowsList <- getSteps liveConfig intervals firstHistoricWindow
+  let historicWindowsStream = S.each historicWindowsList
 
   {- Run an infinite loop to make and execute decisions based on market data -}
-  _ <- runStateT (makeAndExecuteDecisions liveConfig conn programStartTime windows) (LookingTo Buy)
+  -- _ <- runStateT (makeAndExecuteDecisions liveConfig conn programStartTime windows) (LookingTo Buy)
+
+  _ <- runStateT (makeAndExecuteHistoricDecisions liveConfig conn programStartTime historicWindowsStream) (LookingTo Buy)
 
   putStrLn "done!"
